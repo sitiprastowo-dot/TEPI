@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TK POS - Version 56</title>
+    <title>TK POS - Version 57</title>
     
     <meta name="theme-color" content="#0f172a">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/924/924514.png">
@@ -13,9 +13,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
-        /* =========================================
-           1. CSS VARIABLES & BASE SETUP (v49)
-        ========================================= */
         :root { 
             --primary: #0f172a; --accent: #3b82f6; --bg: #f1f5f9; 
             --card: #ffffff; --text: #334155; --text-dark: #020617; 
@@ -29,9 +26,6 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-        /* =========================================
-           2. UTILITY CLASSES
-        ========================================= */
         .flex { display: flex; } .flex-col { display: flex; flex-direction: column; }
         .flex-between { display: flex; justify-content: space-between; align-items: center; }
         .flex-center { display: flex; justify-content: center; align-items: center; }
@@ -56,9 +50,6 @@
         .scroll-y { overflow-y: auto; overflow-x: hidden; position: relative; }
         .border-bottom { border-bottom: 1px solid var(--border); } .border-dashed { border-bottom: 1px dashed var(--border); } .border-radius-8 { border-radius: 8px; }
 
-        /* =========================================
-           3. UI COMPONENTS
-        ========================================= */
         .sidebar { width: 80px; background: var(--primary); padding: 15px 10px; color: white; flex-shrink: 0; z-index: 50; height: 100dvh; display: flex; flex-direction: column; overflow-y: auto; }
         .logo-icon { width: 40px; height: 40px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 900; box-shadow: 0 0 15px rgba(59,130,246,0.4); margin: 0 auto 25px; }
         .side-btn { background: transparent; border: none; color: #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 100%; padding: 12px 0; border-radius: 10px; margin-bottom: 8px; transition: 0.2s; font-size: 20px; }
@@ -268,7 +259,7 @@
                     <div class="text-xs text-bold text-success">PROFIT MARGIN</div>
                     <div id="m-margin" class="text-xl text-heavy text-success">0%</div>
                 </div>
-                <button class="btn btn-success w-100" style="height:45px;" onclick="Menu.save()">SAVE MENU</button>
+                <button class="btn btn-success w-100" style="height:45px;" onclick="Menu.save()">SAVE MENU & SYNC ALL</button>
                 <button class="btn btn-danger w-100 mt-10" style="height:35px;" onclick="Menu.delete()">DELETE MENU</button>
             </div>
         </div>
@@ -403,7 +394,7 @@
         <label>Base Quantity</label><input type="number" id="ms-qty" class="mb-10">
         <label>Avg Cost/Unit (Rp)</label><input type="number" id="ms-cost" class="mb-10">
         <div class="highlight-box text-xs text-muted mb-15">Asset Value = Qty × Avg Cost</div>
-        <button class="btn btn-success w-100 mb-10" onclick="Stock.saveEdit()">Save Changes</button>
+        <button class="btn btn-success w-100 mb-10" onclick="Stock.saveEdit()">Save & Sync Changes</button>
         <button class="btn btn-danger w-100" onclick="UI.hideModal('modal-stock')">Cancel</button>
     </div>
 </div>
@@ -443,6 +434,43 @@ const Store = {
     state: { stock: [], menus: {}, sales: [], bop: [], purchases: [] },
     load: () => { Object.keys(DB_KEYS).forEach(k => { Store.state[k] = JSON.parse(localStorage.getItem(DB_KEYS[k])) || (k === 'menus' ? {} : []); }); },
     save: () => { Object.keys(DB_KEYS).forEach(k => { localStorage.setItem(DB_KEYS[k], JSON.stringify(Store.state[k])); }); }
+};
+
+/* GLOBAL SYNC ENGINE: Re-calcs all history to match current Menu & Stock definitions */
+const Sync = {
+    recalculateAll: () => {
+        let agg = Stock.getAgg();
+        
+        // 1. Update Menu HPP mathematically
+        Object.values(Store.state.menus).forEach(m => {
+            let hpp = 0;
+            if(m.ings) {
+                m.ings.forEach(ing => {
+                    if(agg[ing.name]) {
+                        hpp += (ing.qty * agg[ing.name].avgCost) * (1 + ((ing.waste||0)/100));
+                    }
+                });
+            }
+            m.hpp = hpp;
+        });
+        
+        // 2. Sync Sales History (Names and COGS only, NOT Price/Revenue)
+        Store.state.sales.forEach(sale => {
+            let newCost = 0;
+            sale.items.forEach(item => {
+                let currentMenu = Store.state.menus[item.id];
+                if(currentMenu) {
+                    item.name = currentMenu.name; // Keep name in sync
+                    item.hpp = currentMenu.hpp;   // Keep HPP in sync
+                }
+                newCost += (item.hpp || 0) * item.qty;
+            });
+            sale.cost = newCost;
+            sale.profit = sale.total - newCost; // Total is frozen, but profit adjusts
+        });
+        
+        Store.save();
+    }
 };
 
 const UI = {
@@ -521,7 +549,6 @@ const POS = {
         let method = UI.val('pos-method');
         let cashInput = document.getElementById('pos-cash');
 
-        // Auto-fill logic
         if (method === 'Cash' && cashInput.dataset.touched !== 'true') {
             cashInput.value = Utils.fmt(finalTotal);
         }
@@ -559,13 +586,19 @@ const POS = {
     },
     checkout: () => {
         let id = document.getElementById('pos-trx-id').innerText;
-        if(!id || id === "") return alert("ID generation error");
+        if(!id || id === "") return alert("ID error");
         
-        let total = Utils.num(UI.text('pos-total')), cash = Utils.num(UI.val('pos-cash')), method = UI.val('pos-method');
+        let total = Utils.num(document.getElementById('pos-total').innerText);
+        let cash = Utils.num(UI.val('pos-cash')), method = UI.val('pos-method');
         let totalCost = 0, agg = Stock.getAgg();
+        
+        let subtotal = 0;
+        POS.cart.forEach(i => subtotal += (i.sellPrice * i.qty) * (1 - (i.disc||0)/100));
+        let ratio = subtotal > 0 ? (total / subtotal) : 1; // Used to allocate cart discount for product summary
 
         POS.cart.forEach(it => {
-            totalCost += (it.hpp || 0) * it.qty; // Cost is unaffected by discount
+            it.finalRevenue = ((it.sellPrice * it.qty) * (1 - (it.disc||0)/100)) * ratio;
+            totalCost += (it.hpp || 0) * it.qty;
             if(it.ings) {
                 it.ings.forEach(ing => {
                     if(agg[ing.name]) {
@@ -579,8 +612,10 @@ const POS = {
         let cartDiscPct = UI.val('pos-disc-pct');
         let cartDiscRp = UI.val('pos-disc-rp');
 
-        let sale = { id: id, date: Utils.today(), time: Utils.time(), customer: UI.val('pos-cust') || 'Guest', items: [...POS.cart], total, cost: totalCost, profit: total - totalCost, method, cash, change: method === 'Cash' ? (cash - total) : 0, cartDiscPct, cartDiscRp };
-        Store.state.sales.push(sale); Store.save();
+        let sale = { id, date: Utils.today(), time: Utils.time(), customer: UI.val('pos-cust') || 'Guest', items: [...POS.cart], total, cost: totalCost, profit: total - totalCost, method, cash, change: method === 'Cash' ? (cash - total) : 0, cartDiscPct, cartDiscRp };
+        Store.state.sales.push(sale); 
+        Store.save();
+        Sync.recalculateAll();
 
         UI.text('r-date', `${sale.date} ${sale.time}`); UI.text('r-id', sale.id); UI.text('r-cust', sale.customer);
         UI.html('r-items', POS.cart.map(i => `<div class="flex-between"><span>${i.name} x${i.qty} ${i.disc>0 ? `<br><small class="text-danger">-${i.disc}%</small>` : ''}</span><span>${Utils.fmt((i.sellPrice * i.qty)*(1-(i.disc||0)/100))}</span></div>`).join(''));
@@ -629,15 +664,22 @@ const Sales = {
             sale.items.forEach(i => { if(i.ings) i.ings.forEach(ing => { if(agg[ing.name]) { let q = ing.qty * i.qty, v = q * agg[ing.name].avgCost; Store.state.stock.push({ id: Date.now()+Math.random(), name: ing.name, type: 'sale_reversal', buyQty: 0, totalVal: v, totalBaseUnits: q, useUnit: agg[ing.name].useUnit }); } }); }); 
         }
         Store.state.sales = Store.state.sales.filter(s => s.id !== id); 
-        Store.save(); Sales.render();
+        Store.save(); 
+        Sync.recalculateAll();
+        Sales.render();
     },
     renderProductSummary: (data) => {
-        let agg = {}; data.forEach(s => s.items.forEach(i => { if(!agg[i.name]) agg[i.name] = { q:0, r:0 }; agg[i.name].q += i.qty; agg[i.name].r += ((i.sellPrice * i.qty) * (1-(i.disc||0)/100)); }));
+        let agg = {}; 
+        data.forEach(s => s.items.forEach(i => { 
+            if(!agg[i.name]) agg[i.name] = { q:0, r:0 }; 
+            agg[i.name].q += i.qty; 
+            agg[i.name].r += i.finalRevenue || ((i.sellPrice * i.qty) * (1-(i.disc||0)/100)); 
+        }));
         let html = `<thead><tr><th class="p-10">Menu</th><th class="p-10 text-right">Sold</th><th class="p-10 text-right">Revenue</th></tr></thead><tbody>`;
         Object.entries(agg).forEach(([k,v]) => { html += `<tr><td class="p-10">${k}</td><td class="p-10 text-right">${v.q}</td><td class="p-10 text-right text-success text-bold">${Utils.fmt(v.r)}</td></tr>`; });
         UI.html('table-products', html + '</tbody>');
     },
-    export: () => { let rows = [["Date", "Time", "ID", "Customer", "Item", "Qty", "Price", "Total", "HPP", "Gross Profit"]]; Store.state.sales.forEach(s => s.items.forEach(i => { let iTot = (i.sellPrice * i.qty)*(1-(i.disc||0)/100), iHpp = (i.hpp||0) * i.qty; rows.push([s.date, s.time, s.id, s.customer, i.name, i.qty, i.sellPrice, iTot, iHpp, iTot-iHpp]); })); DataBackup.xlsx(rows, "TK_Sales_Report"); }
+    export: () => { let rows = [["Date", "Time", "ID", "Customer", "Item", "Qty", "Price", "Total", "HPP", "Gross Profit"]]; Store.state.sales.forEach(s => s.items.forEach(i => { let iTot = i.finalRevenue || ((i.sellPrice * i.qty)*(1-(i.disc||0)/100)), iHpp = (i.hpp||0) * i.qty; rows.push([s.date, s.time, s.id, s.customer, i.name, i.qty, i.sellPrice, iTot, iHpp, iTot-iHpp]); })); DataBackup.xlsx(rows, "TK_Sales_Report"); }
 };
 
 const Menu = {
@@ -696,9 +738,13 @@ const Menu = {
     save: () => {
         if(!Menu.activeId) return;
         let ings = Array.from(document.querySelectorAll('.ing-row')).map(r => ({ name: r.querySelector('.i-name').value, qty: Utils.num(r.querySelector('.i-qty').value), waste: Utils.num(r.querySelector('.i-waste').value) })).filter(i => i.name);
-        // Uses mathematical Menu.calcHPP() directly instead of UI string
-        Store.state.menus[Menu.activeId] = { name: UI.val('m-name'), sellPrice: Utils.num(UI.val('m-price')), order: parseInt(UI.val('m-order')) || 0, ings, hpp: Menu.calcHPP() };
-        Store.save(); alert('Menu Saved!'); Menu.init(); UI.val('menu-select', Menu.activeId);
+        Store.state.menus[Menu.activeId] = { name: UI.val('m-name'), sellPrice: Utils.num(UI.val('m-price')), order: parseInt(UI.val('m-order')) || 0, ings, hpp: 0 };
+        Store.save(); 
+        Sync.recalculateAll(); // Mathematically calculate HPP & cascade down to sales history
+        alert('Menu Saved & Synced to History!'); 
+        Menu.init(); 
+        UI.val('menu-select', Menu.activeId);
+        Menu.load();
     }
 };
 
@@ -724,12 +770,12 @@ const Stock = {
         UI.html('table-stock', html + '</tbody>');
     },
     handleSelect: () => { let v = UI.val('s-sel'); document.getElementById('s-new').classList.toggle('hidden', v !== 'NEW'); document.getElementById('s-type').disabled = (v !== 'NEW' && v !== ''); if(v !== 'NEW' && v !== '') { let ex = Store.state.stock.find(x => x.name === v); if(ex) UI.val('s-type', ex.type); } },
-    add: () => { let v = UI.val('s-sel'), name = v === 'NEW' ? UI.val('s-new').trim() : v, t = UI.val('s-type'), qty = Utils.num(UI.val('s-qty')), price = Utils.num(UI.val('s-price')); if(!name || !qty || !price) return alert("Fill all fields"); let f = (t === 'weight' || t === 'volume') ? 1000 : 1; Store.state.stock.push({ id: Date.now(), name, type: t, buyQty: qty, totalVal: price, totalBaseUnits: qty * f, useUnit: (t==='weight'?'Gram':t==='volume'?'ml':'Pcs') }); Store.save(); Stock.clear(); Stock.render(); },
+    add: () => { let v = UI.val('s-sel'), name = v === 'NEW' ? UI.val('s-new').trim() : v, t = UI.val('s-type'), qty = Utils.num(UI.val('s-qty')), price = Utils.num(UI.val('s-price')); if(!name || !qty || !price) return alert("Fill all fields"); let f = (t === 'weight' || t === 'volume') ? 1000 : 1; Store.state.stock.push({ id: Date.now(), name, type: t, buyQty: qty, totalVal: price, totalBaseUnits: qty * f, useUnit: (t==='weight'?'Gram':t==='volume'?'ml':'Pcs') }); Store.save(); Sync.recalculateAll(); Stock.clear(); Stock.render(); },
     clear: () => { UI.val('s-sel',''); UI.val('s-new',''); UI.val('s-qty',''); UI.val('s-price',''); Stock.handleSelect(); },
-    adj: (name) => { let agg = Stock.getAgg(), item = agg[name], val = parseFloat(prompt(`Adjust ${name} (+/-):\nCurrent: ${item.base} ${item.useUnit}`)); if(!isNaN(val) && val !== 0) { Store.state.stock.push({ id: Date.now(), name, type: 'adjustment', buyQty: 0, totalVal: val*item.avgCost, totalBaseUnits: val, useUnit: item.useUnit }); Store.save(); Stock.render(); } },
+    adj: (name) => { let agg = Stock.getAgg(), item = agg[name], val = parseFloat(prompt(`Adjust ${name} (+/-):\nCurrent: ${item.base} ${item.useUnit}`)); if(!isNaN(val) && val !== 0) { Store.state.stock.push({ id: Date.now(), name, type: 'adjustment', buyQty: 0, totalVal: val*item.avgCost, totalBaseUnits: val, useUnit: item.useUnit }); Store.save(); Sync.recalculateAll(); Stock.render(); } },
     edit: (name) => { let item = Stock.getAgg()[name]; UI.val('ms-old', name); UI.val('ms-name', name); UI.val('ms-qty', item.base); UI.val('ms-cost', item.avgCost.toFixed(2)); UI.showModal('modal-stock'); },
-    saveEdit: () => { let old = UI.val('ms-old'), cur = UI.val('ms-name'), q = parseFloat(UI.val('ms-qty')), c = parseFloat(UI.val('ms-cost')); if(!cur || isNaN(q) || isNaN(c)) return alert("Invalid Input"); if(old !== cur) { Store.state.stock.forEach(l => { if(l.name === old) l.name = cur; }); Object.values(Store.state.menus).forEach(m => { if(m.ings) m.ings.forEach(i => { if(i.name === old) i.name = cur; }); }); } let item = Stock.getAgg()[cur] || Stock.getAgg()[old], tarVal = q * c, cQty = item ? item.base : 0, cVal = item ? item.val : 0; Store.state.stock.push({ id: Date.now(), name: cur, type: 'manual_correction', buyQty: 0, totalBaseUnits: q - cQty, totalVal: tarVal - cVal, useUnit: item ? item.useUnit : 'Unit' }); Store.save(); Stock.render(); Menu.init(); UI.hideModal('modal-stock'); },
-    del: (name) => { if(confirm(`Delete "${name}" entirely?`)) { Store.state.stock = Store.state.stock.filter(l => l.name !== name); Store.save(); Stock.render(); Menu.init(); } },
+    saveEdit: () => { let old = UI.val('ms-old'), cur = UI.val('ms-name'), q = parseFloat(UI.val('ms-qty')), c = parseFloat(UI.val('ms-cost')); if(!cur || isNaN(q) || isNaN(c)) return alert("Invalid Input"); if(old !== cur) { Store.state.stock.forEach(l => { if(l.name === old) l.name = cur; }); Object.values(Store.state.menus).forEach(m => { if(m.ings) m.ings.forEach(i => { if(i.name === old) i.name = cur; }); }); } let item = Stock.getAgg()[cur] || Stock.getAgg()[old], tarVal = q * c, cQty = item ? item.base : 0, cVal = item ? item.val : 0; Store.state.stock.push({ id: Date.now(), name: cur, type: 'manual_correction', buyQty: 0, totalBaseUnits: q - cQty, totalVal: tarVal - cVal, useUnit: item ? item.useUnit : 'Unit' }); Store.save(); Sync.recalculateAll(); Stock.render(); Menu.init(); UI.hideModal('modal-stock'); },
+    del: (name) => { if(confirm(`Delete "${name}" entirely?`)) { Store.state.stock = Store.state.stock.filter(l => l.name !== name); Store.save(); Sync.recalculateAll(); Stock.render(); Menu.init(); } },
     export: () => { let rows = [["Item Name", "Total Stock", "Unit", "Avg Cost/Unit", "Asset Value"]]; Object.entries(Stock.getAgg()).forEach(([k,v]) => rows.push([k, v.base, v.useUnit, v.avgCost.toFixed(2), v.val])); DataBackup.xlsx(rows, "TK_Inventory_Report"); }
 };
 
@@ -766,7 +812,7 @@ UI.nav('pos');
 
 <script>
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(() => console.log('v56 SW Registered'));
+        navigator.serviceWorker.register('sw.js').then(() => console.log('v57 SW Registered'));
     }
 </script>
 </body>
