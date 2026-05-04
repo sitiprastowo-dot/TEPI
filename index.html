@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TK POS - Version 57</title>
+    <title>TK POS - Version 58</title>
     
     <meta name="theme-color" content="#0f172a">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/924/924514.png">
@@ -13,6 +13,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
+        /* =========================================
+           1. CSS VARIABLES & BASE SETUP (v49)
+        ========================================= */
         :root { 
             --primary: #0f172a; --accent: #3b82f6; --bg: #f1f5f9; 
             --card: #ffffff; --text: #334155; --text-dark: #020617; 
@@ -26,6 +29,9 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
+        /* =========================================
+           2. UTILITY CLASSES
+        ========================================= */
         .flex { display: flex; } .flex-col { display: flex; flex-direction: column; }
         .flex-between { display: flex; justify-content: space-between; align-items: center; }
         .flex-center { display: flex; justify-content: center; align-items: center; }
@@ -50,6 +56,9 @@
         .scroll-y { overflow-y: auto; overflow-x: hidden; position: relative; }
         .border-bottom { border-bottom: 1px solid var(--border); } .border-dashed { border-bottom: 1px dashed var(--border); } .border-radius-8 { border-radius: 8px; }
 
+        /* =========================================
+           3. UI COMPONENTS
+        ========================================= */
         .sidebar { width: 80px; background: var(--primary); padding: 15px 10px; color: white; flex-shrink: 0; z-index: 50; height: 100dvh; display: flex; flex-direction: column; overflow-y: auto; }
         .logo-icon { width: 40px; height: 40px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 900; box-shadow: 0 0 15px rgba(59,130,246,0.4); margin: 0 auto 25px; }
         .side-btn { background: transparent; border: none; color: #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 100%; padding: 12px 0; border-radius: 10px; margin-bottom: 8px; transition: 0.2s; font-size: 20px; }
@@ -112,9 +121,9 @@
     
     <div class="mt-auto w-100">
         <div class="border-dashed mb-15"></div>
-        <button class="side-btn" onclick="DataBackup.export()" title="Backup"><span class="icon">💾</span></button>
+        <button class="side-btn" onclick="DataBackup.exportDB()" title="Backup"><span class="icon">💾</span></button>
         <button class="side-btn" onclick="document.getElementById('import-file').click()" title="Restore"><span class="icon">📂</span></button>
-        <input type="file" id="import-file" class="hidden" accept=".json" onchange="DataBackup.import(event)">
+        <input type="file" id="import-file" class="hidden" accept=".json" onchange="DataBackup.importDB(event)">
     </div>
 </nav>
 
@@ -155,7 +164,7 @@
                     </div>
                     <div id="box-qris" class="highlight-box hidden" style="background:#eff6ff; border-color:#bfdbfe;">
                         <label class="text-accent">Reference ID</label>
-                        <input type="text" id="pos-qris-ref" class="text-heavy mb-0">
+                        <input type="text" id="pos-qris-ref" class="text-heavy mb-0" placeholder="Optional Ref #">
                     </div>
                 </div>
             </div>
@@ -436,39 +445,29 @@ const Store = {
     save: () => { Object.keys(DB_KEYS).forEach(k => { localStorage.setItem(DB_KEYS[k], JSON.stringify(Store.state[k])); }); }
 };
 
-/* GLOBAL SYNC ENGINE: Re-calcs all history to match current Menu & Stock definitions */
 const Sync = {
     recalculateAll: () => {
         let agg = Stock.getAgg();
-        
-        // 1. Update Menu HPP mathematically
         Object.values(Store.state.menus).forEach(m => {
             let hpp = 0;
             if(m.ings) {
                 m.ings.forEach(ing => {
-                    if(agg[ing.name]) {
-                        hpp += (ing.qty * agg[ing.name].avgCost) * (1 + ((ing.waste||0)/100));
-                    }
+                    if(agg[ing.name]) { hpp += (ing.qty * agg[ing.name].avgCost) * (1 + ((ing.waste||0)/100)); }
                 });
             }
             m.hpp = hpp;
         });
         
-        // 2. Sync Sales History (Names and COGS only, NOT Price/Revenue)
         Store.state.sales.forEach(sale => {
             let newCost = 0;
             sale.items.forEach(item => {
                 let currentMenu = Store.state.menus[item.id];
-                if(currentMenu) {
-                    item.name = currentMenu.name; // Keep name in sync
-                    item.hpp = currentMenu.hpp;   // Keep HPP in sync
-                }
+                if(currentMenu) { item.name = currentMenu.name; item.hpp = currentMenu.hpp; }
                 newCost += (item.hpp || 0) * item.qty;
             });
             sale.cost = newCost;
-            sale.profit = sale.total - newCost; // Total is frozen, but profit adjusts
+            sale.profit = sale.total - newCost;
         });
-        
         Store.save();
     }
 };
@@ -590,11 +589,13 @@ const POS = {
         
         let total = Utils.num(document.getElementById('pos-total').innerText);
         let cash = Utils.num(UI.val('pos-cash')), method = UI.val('pos-method');
-        let totalCost = 0, agg = Stock.getAgg();
+        // BUG FIX: Getting qris reference
+        let qrisRef = UI.val('pos-qris-ref') || '';
         
+        let totalCost = 0, agg = Stock.getAgg();
         let subtotal = 0;
         POS.cart.forEach(i => subtotal += (i.sellPrice * i.qty) * (1 - (i.disc||0)/100));
-        let ratio = subtotal > 0 ? (total / subtotal) : 1; // Used to allocate cart discount for product summary
+        let ratio = subtotal > 0 ? (total / subtotal) : 1; 
 
         POS.cart.forEach(it => {
             it.finalRevenue = ((it.sellPrice * it.qty) * (1 - (it.disc||0)/100)) * ratio;
@@ -612,7 +613,7 @@ const POS = {
         let cartDiscPct = UI.val('pos-disc-pct');
         let cartDiscRp = UI.val('pos-disc-rp');
 
-        let sale = { id, date: Utils.today(), time: Utils.time(), customer: UI.val('pos-cust') || 'Guest', items: [...POS.cart], total, cost: totalCost, profit: total - totalCost, method, cash, change: method === 'Cash' ? (cash - total) : 0, cartDiscPct, cartDiscRp };
+        let sale = { id, date: Utils.today(), time: Utils.time(), customer: UI.val('pos-cust') || 'Guest', items: [...POS.cart], total, cost: totalCost, profit: total - totalCost, method, cash, qrisRef, change: method === 'Cash' ? (cash - total) : 0, cartDiscPct, cartDiscRp };
         Store.state.sales.push(sale); 
         Store.save();
         Sync.recalculateAll();
@@ -629,7 +630,7 @@ const POS = {
             document.getElementById('r-disc').classList.add('hidden');
         }
 
-        UI.text('r-total', Utils.fmt(sale.total)); UI.text('r-method', sale.method); UI.text('r-paid', method === 'Cash' ? Utils.fmt(sale.cash) : UI.val('pos-qris-ref')); UI.text('r-change', Utils.fmt(sale.change));
+        UI.text('r-total', Utils.fmt(sale.total)); UI.text('r-method', sale.method); UI.text('r-paid', method === 'Cash' ? Utils.fmt(sale.cash) : qrisRef); UI.text('r-change', Utils.fmt(sale.change));
         UI.showModal('modal-receipt');
         
         POS.cart = []; UI.val('pos-cust', ''); UI.val('pos-qris-ref', ''); POS.init();
@@ -646,8 +647,15 @@ const Sales = {
         [...data].reverse().forEach(s => {
             rev += s.total; cost += s.cost; gProf += s.profit; 
             let itemsStr = s.items.map(i => `${i.name} <b class="text-primary">x${i.qty}</b> ${i.disc>0 ? `<span class="text-danger">(-${i.disc}%)</span>` : ''}`).join('<br>');
+            
+            // BUG FIX: Inject QRIS Ref into the table display
+            let methodHtml = `<span class="badge">${s.method}</span>`;
+            if (s.method === 'QRIS' && s.qrisRef) {
+                methodHtml += `<br><span class="text-xs text-muted" style="font-family: monospace;">Ref: ${s.qrisRef}</span>`;
+            }
+
             html += `<tr><td><b class="text-dark">${s.date}</b><br><span class="text-xs text-muted">${s.time}</span></td><td class="text-bold text-accent">${s.id || 'N/A'}</td><td>${s.customer}</td><td class="text-xs text-muted">${itemsStr}</td>
-                <td>${Utils.fmt(s.total)}</td><td><span class="badge">${s.method}</span></td><td class="text-success text-bold">${Utils.fmt(s.profit)}</td><td class="text-right"><button class="btn-icon btn-danger" onclick="Sales.del('${s.id}')">🗑️</button></td></tr>`;
+                <td>${Utils.fmt(s.total)}</td><td>${methodHtml}</td><td class="text-success text-bold">${Utils.fmt(s.profit)}</td><td class="text-right"><button class="btn-icon btn-danger" onclick="Sales.del('${s.id}')">🗑️</button></td></tr>`;
         });
         
         UI.html('table-sales', html + '</tbody>');
@@ -670,16 +678,32 @@ const Sales = {
     },
     renderProductSummary: (data) => {
         let agg = {}; 
+        let totalSold = 0;
+        let totalRevenue = 0;
+
         data.forEach(s => s.items.forEach(i => { 
             if(!agg[i.name]) agg[i.name] = { q:0, r:0 }; 
             agg[i.name].q += i.qty; 
             agg[i.name].r += i.finalRevenue || ((i.sellPrice * i.qty) * (1-(i.disc||0)/100)); 
         }));
+        
         let html = `<thead><tr><th class="p-10">Menu</th><th class="p-10 text-right">Sold</th><th class="p-10 text-right">Revenue</th></tr></thead><tbody>`;
-        Object.entries(agg).forEach(([k,v]) => { html += `<tr><td class="p-10">${k}</td><td class="p-10 text-right">${v.q}</td><td class="p-10 text-right text-success text-bold">${Utils.fmt(v.r)}</td></tr>`; });
+        Object.entries(agg).forEach(([k,v]) => { 
+            totalSold += v.q;
+            totalRevenue += v.r;
+            html += `<tr><td class="p-10">${k}</td><td class="p-10 text-right">${v.q}</td><td class="p-10 text-right text-success text-bold">${Utils.fmt(v.r)}</td></tr>`; 
+        });
+        
+        // BUG FIX: Add total row
+        html += `<tr style="background:var(--bg); border-top: 2px solid var(--border);">
+                    <td class="p-10 text-right text-bold">TOTAL</td>
+                    <td class="p-10 text-right text-heavy text-primary">${totalSold}</td>
+                    <td class="p-10 text-right text-heavy text-success">Rp ${Utils.fmt(totalRevenue)}</td>
+                 </tr>`;
+
         UI.html('table-products', html + '</tbody>');
     },
-    export: () => { let rows = [["Date", "Time", "ID", "Customer", "Item", "Qty", "Price", "Total", "HPP", "Gross Profit"]]; Store.state.sales.forEach(s => s.items.forEach(i => { let iTot = i.finalRevenue || ((i.sellPrice * i.qty)*(1-(i.disc||0)/100)), iHpp = (i.hpp||0) * i.qty; rows.push([s.date, s.time, s.id, s.customer, i.name, i.qty, i.sellPrice, iTot, iHpp, iTot-iHpp]); })); DataBackup.xlsx(rows, "TK_Sales_Report"); }
+    export: () => { let rows = [["Date", "Time", "ID", "Customer", "Method", "QRIS Ref", "Item", "Qty", "Price", "Total", "HPP", "Gross Profit"]]; Store.state.sales.forEach(s => s.items.forEach(i => { let iTot = i.finalRevenue || ((i.sellPrice * i.qty)*(1-(i.disc||0)/100)), iHpp = (i.hpp||0) * i.qty; rows.push([s.date, s.time, s.id, s.customer, s.method, s.qrisRef||'', i.name, i.qty, i.sellPrice, iTot, iHpp, iTot-iHpp]); })); DataBackup.xlsx(rows, "TK_Sales_Report"); }
 };
 
 const Menu = {
@@ -740,12 +764,13 @@ const Menu = {
         let ings = Array.from(document.querySelectorAll('.ing-row')).map(r => ({ name: r.querySelector('.i-name').value, qty: Utils.num(r.querySelector('.i-qty').value), waste: Utils.num(r.querySelector('.i-waste').value) })).filter(i => i.name);
         Store.state.menus[Menu.activeId] = { name: UI.val('m-name'), sellPrice: Utils.num(UI.val('m-price')), order: parseInt(UI.val('m-order')) || 0, ings, hpp: 0 };
         Store.save(); 
-        Sync.recalculateAll(); // Mathematically calculate HPP & cascade down to sales history
+        Sync.recalculateAll();
         alert('Menu Saved & Synced to History!'); 
         Menu.init(); 
         UI.val('menu-select', Menu.activeId);
         Menu.load();
-    }
+    },
+    export: () => { let rows = [["Menu Name", "Sell Price", "Ingredient", "Unit", "Qty Required", "Waste %", "Cost Contrib"]]; let agg = Stock.getAgg(); Object.values(Store.state.menus).forEach(m => { if(!m.ings || !m.ings.length) rows.push([m.name, m.sellPrice, "NONE", "-", 0, 0, 0]); else m.ings.forEach(i => rows.push([m.name, m.sellPrice, i.name, agg[i.name]?.useUnit||'-', i.qty, i.waste, (i.qty * (agg[i.name]?.avgCost||0) * (1+(i.waste/100))) ])); }); DataBackup.xlsx(rows, "Menu_HPP_Analysis"); }
 };
 
 const Stock = {
@@ -798,8 +823,22 @@ const BOP = {
 };
 
 const DataBackup = {
-    export: () => { let blob = new Blob([JSON.stringify(Store.state)], {type: "application/json"}); let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `TK_Backup_${Utils.today()}.json`; a.click(); },
-    import: (e) => { let f = e.target.files[0]; if(!f) return; let r = new FileReader(); r.onload = (evt) => { try { let d = JSON.parse(evt.target.result); if(d.stock && d.menus && d.sales && confirm("Overwrite system with backup?")) { Store.state = { stock: d.stock||[], menus: d.menus||{}, sales: d.sales||[], bop: d.bop||[], purchases: d.purchases||[] }; Store.save(); location.reload(); } } catch(err) { alert("Backup corrupted."); } }; r.readAsText(f); }
+    exportDB: () => { let blob = new Blob([JSON.stringify(Store.state)], {type: "application/json"}); let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `TK_Backup_${Utils.today()}.json`; a.click(); },
+    importDB: (e) => { let f = e.target.files[0]; if(!f) return; let r = new FileReader(); r.onload = (evt) => { try { let d = JSON.parse(evt.target.result); if(d.stock && d.menus && d.sales && confirm("Overwrite system with backup?")) { Store.state = { stock: d.stock||[], menus: d.menus||{}, sales: d.sales||[], bop: d.bop||[], purchases: d.purchases||[] }; Store.save(); location.reload(); } } catch(err) { alert("Backup corrupted."); } }; r.readAsText(f); },
+    // BUG FIX: Added robust try-catch and alert fallback if the XLSX script failed to load via internet
+    xlsx: (rows, name) => { 
+        if (typeof XLSX === 'undefined') {
+            alert("Export library is still loading. Please ensure you have an active internet connection to download the Excel generator script.");
+            return;
+        }
+        try {
+            let wb = XLSX.utils.book_new(); 
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Data"); 
+            XLSX.writeFile(wb, `${name}.xlsx`); 
+        } catch (e) {
+            alert("Export failed: " + e.message);
+        }
+    }
 };
 
 // --- INIT APP ---
@@ -812,7 +851,7 @@ UI.nav('pos');
 
 <script>
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(() => console.log('v57 SW Registered'));
+        navigator.serviceWorker.register('sw.js').then(() => console.log('v58 SW Registered'));
     }
 </script>
 </body>
