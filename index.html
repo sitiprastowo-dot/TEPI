@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TK POS - Version 59</title>
+    <title>TK POS - Version 60</title>
     
     <meta name="theme-color" content="#0f172a">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/924/924514.png">
@@ -99,7 +99,6 @@
         .receipt { font-family: 'Space Mono', monospace; color: #1e293b; font-size: 11px; }
         .letter-spacing-1 { letter-spacing: 1px; }
         
-        /* POS Block Overlay */
         #shift-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-radius: 12px; }
     </style>
 </head>
@@ -154,22 +153,14 @@
             <div class="panel">
                 <div class="panel-head">Order Details</div>
                 <div class="panel-body flex-col gap-10">
-                    <div class="flex-between highlight-box shrink-0">
-                        <span class="text-xs text-bold text-muted">TRX ID</span>
-                        <span id="pos-trx-id" class="text-sm text-heavy text-primary"></span>
-                    </div>
+                    <div class="flex-between highlight-box shrink-0"><span class="text-xs text-bold text-muted">TRX ID</span><span id="pos-trx-id" class="text-sm text-heavy text-primary"></span></div>
                     <div><label>Customer</label><input type="text" id="pos-cust" class="mb-0" placeholder="Guest Name"></div>
-                    <div>
-                        <label>Payment</label>
-                        <select id="pos-method" class="mb-0" onchange="POS.togglePayment()"><option value="Cash">Cash</option><option value="QRIS">QRIS</option></select>
-                    </div>
+                    <div><label>Payment</label><select id="pos-method" class="mb-0" onchange="POS.togglePayment()"><option value="Cash">Cash</option><option value="QRIS">QRIS</option></select></div>
                     
                     <div id="box-cash" class="highlight-box" style="background:#f0fdf4; border-color:#bbf7d0;">
                         <label class="text-success">Cash Received (Rp)</label>
                         <input type="text" inputmode="decimal" id="pos-cash" class="text-lg text-heavy text-success mb-0" data-touched="false" oninput="this.dataset.touched='true'; Utils.formatInput(this); POS.calc()">
-                        <div class="flex-between mt-10 pt-10 border-dashed text-sm text-heavy text-success">
-                            <span>Change:</span><span id="pos-change">Rp 0</span>
-                        </div>
+                        <div class="flex-between mt-10 pt-10 border-dashed text-sm text-heavy text-success"><span>Change:</span><span id="pos-change">Rp 0</span></div>
                     </div>
                     <div id="box-qris" class="highlight-box hidden" style="background:#eff6ff; border-color:#bfdbfe;">
                         <label class="text-accent">Reference ID</label>
@@ -183,12 +174,10 @@
                 <div class="panel-body p-10" id="pos-cart-list"></div>
                 <div class="p-15 highlight-box shrink-0" style="border-radius:0; border-top:1px solid var(--border);">
                     <div class="flex-between text-sm text-muted mb-5"><span>Subtotal</span><span id="pos-subtotal">Rp 0</span></div>
-                    
                     <div class="flex-between text-sm text-muted mb-10 align-center gap-10">
                         <div class="flex align-center gap-5"><span>Disc %</span><input type="number" id="pos-disc-pct" class="p-5 text-center mb-0" style="width:50px;" value="0" oninput="POS.calc()"></div>
                         <div class="flex align-center gap-5"><span>Disc Rp</span><input type="text" id="pos-disc-rp" class="p-5 text-right mb-0 flex-1" value="0" oninput="Utils.formatInput(this); POS.calc()"></div>
                     </div>
-
                     <div class="flex-between text-xl text-heavy mb-15"><span>TOTAL</span><span id="pos-total">Rp 0</span></div>
                     <button id="btn-checkout" class="btn btn-primary w-100 text-md" style="height:45px;" onclick="POS.checkout()" disabled>FINALIZE ORDER</button>
                 </div>
@@ -232,7 +221,7 @@
         <div class="flex-between mb-15 shrink-0">
             <h2 class="text-xl text-heavy">Menu Configuration</h2>
             <div class="flex gap-10">
-                <button class="btn btn-accent btn-sm" onclick="Mods.openManager()">Manage Add-ons</button>
+                <button class="btn btn-accent btn-sm" onclick="Mods.openManager()">Manage Add-ons & Modifiers</button>
                 <button class="btn btn-primary btn-sm" onclick="Menu.create()">+ New Menu</button>
                 <button class="btn btn-warning btn-sm" onclick="Menu.export()">Export HPP</button>
             </div>
@@ -240,9 +229,7 @@
 
         <div class="grid gap-15 flex-1" style="grid-template-columns: 1fr 320px;">
             <div class="panel">
-                <div class="p-15 border-bottom flex gap-15 shrink-0">
-                    <div class="flex-1"><label>Select Menu</label><select id="menu-select" class="mb-0 text-bold" onchange="Menu.load()"></select></div>
-                </div>
+                <div class="p-15 border-bottom flex gap-15 shrink-0"><div class="flex-1"><label>Select Menu</label><select id="menu-select" class="mb-0 text-bold" onchange="Menu.load()"></select></div></div>
                 <div class="p-15 flex-col flex-1 shrink-0">
                     <div class="flex-between mb-10 shrink-0"><label class="mb-0">Ingredients Recipe</label><button class="btn btn-sm btn-primary" onclick="Menu.addIngredient()">+ Add</button></div>
                     <div class="flex-1 scroll-y bg-white border-radius-8" style="border:1px solid var(--border);">
@@ -257,20 +244,13 @@
             <div class="panel p-15 flex-col">
                 <h3 class="text-md text-heavy mb-10">Pricing Strategy</h3>
                 <label>Menu Name</label><input type="text" id="m-name" placeholder="Ex: Latte">
-                
-                <div class="flex gap-10 mb-0">
-                    <div class="flex-1"><label>Selling Price (Rp)</label><input type="text" inputmode="decimal" id="m-price" class="text-lg text-heavy" oninput="Utils.formatInput(this); Menu.calcHPP()"></div>
-                    <div style="width:80px;"><label>Sort Order</label><input type="number" id="m-order" value="0" class="text-center text-heavy"></div>
-                </div>
-
+                <div class="flex gap-10 mb-0"><div class="flex-1"><label>Selling Price (Rp)</label><input type="text" inputmode="decimal" id="m-price" class="text-lg text-heavy" oninput="Utils.formatInput(this); Menu.calcHPP()"></div><div style="width:80px;"><label>Sort Order</label><input type="number" id="m-order" value="0" class="text-center text-heavy"></div></div>
                 <div class="highlight-box mt-10">
                     <div class="flex-between mb-5"><span class="text-xs text-muted">Total HPP</span><span id="m-hpp" class="text-bold text-danger">Rp 0</span></div>
                     <div class="flex-between"><span class="text-xs text-muted">Gross Profit</span><span id="m-profit" class="text-bold text-success">Rp 0</span></div>
                 </div>
-
                 <div id="m-badge" class="mt-auto p-15 text-center border-radius-8 mb-10" style="background:#f0fdf4; border:1px solid #bbf7d0;">
-                    <div class="text-xs text-bold text-success">PROFIT MARGIN</div>
-                    <div id="m-margin" class="text-xl text-heavy text-success">0%</div>
+                    <div class="text-xs text-bold text-success">PROFIT MARGIN</div><div id="m-margin" class="text-xl text-heavy text-success">0%</div>
                 </div>
                 <button class="btn btn-success w-100" style="height:45px;" onclick="Menu.save()">SAVE MENU & SYNC ALL</button>
                 <button class="btn btn-danger w-100 mt-10" style="height:35px;" onclick="Menu.delete()">DELETE MENU</button>
@@ -279,11 +259,7 @@
     </section>
 
     <section id="stock" class="section">
-        <div class="flex-between mb-15 shrink-0">
-            <h2 class="text-xl text-heavy">Inventory Management</h2>
-            <button class="btn btn-success btn-sm" onclick="Stock.export()">Export Inventory</button>
-        </div>
-        
+        <div class="flex-between mb-15 shrink-0"><h2 class="text-xl text-heavy">Inventory Management</h2><button class="btn btn-success btn-sm" onclick="Stock.export()">Export Inventory</button></div>
         <div class="panel mb-15 shrink-0">
             <div class="panel-head">Record Purchase (Inbound)</div>
             <div class="panel-body p-15">
@@ -311,55 +287,50 @@
             </div>
             <div class="panel p-15 flex-col">
                 <h3 class="text-md text-heavy mb-15 shrink-0">Record Expense</h3>
-                <input type="hidden" id="p-id"><label>Date</label><input type="date" id="p-date" class="mb-15"><label>Description</label><input type="text" id="p-desc" class="mb-15">
-                <label>Category</label><select id="p-cat" class="mb-15"><option value="Operational">Operational</option><option value="Equipment">Equipment</option><option value="Raw Material">Raw Material</option><option value="Packaging">Packaging</option><option value="Other">Other</option></select>
-                <label>Total Cost (Rp)</label><input type="text" id="p-cost" class="text-lg text-heavy mb-15" oninput="Utils.formatInput(this)">
-                <div class="flex gap-10 mt-auto shrink-0"><button id="btn-p-save" class="btn btn-primary flex-1" onclick="Purchases.save()">RECORD</button><button id="btn-p-cancel" class="btn btn-danger hidden shrink-0" onclick="Purchases.cancel()">CANCEL</button></div>
+                <input type="hidden" id="p-id">
+                <label>Date</label>
+                <input type="date" id="p-date" class="mb-15">
+                
+                <label>Description (Link to Inventory)</label>
+                <select id="p-sel" class="mb-10" onchange="Purchases.handleSel()"></select>
+                <input type="text" id="p-new" class="hidden mb-15" placeholder="Or type new expense name...">
+                
+                <label>Category</label>
+                <select id="p-cat" class="mb-15"><option value="Operational">Operational</option><option value="Equipment">Equipment</option><option value="Raw Material">Raw Material</option><option value="Packaging">Packaging</option><option value="Other">Other</option></select>
+                
+                <label>Total Cost (Rp)</label>
+                <input type="text" id="p-cost" class="text-lg text-heavy mb-15" oninput="Utils.formatInput(this)">
+                
+                <div class="flex gap-10 mt-auto shrink-0">
+                    <button id="btn-p-save" class="btn btn-primary flex-1" onclick="Purchases.save()">RECORD</button>
+                    <button id="btn-p-cancel" class="btn btn-danger hidden shrink-0" onclick="Purchases.cancel()">CANCEL</button>
+                </div>
             </div>
         </div>
     </section>
 
     <section id="bop" class="section">
-        <div class="flex-between mb-15 shrink-0">
-            <h2 class="text-xl text-heavy">Overhead & Depreciation</h2>
-            <button class="btn btn-warning btn-sm" onclick="BOP.export()">Export Overhead</button>
-        </div>
-
+        <div class="flex-between mb-15 shrink-0"><h2 class="text-xl text-heavy">Overhead & Depreciation</h2><button class="btn btn-warning btn-sm" onclick="BOP.export()">Export Overhead</button></div>
         <div class="grid gap-15 flex-1" style="grid-template-columns: 350px 1fr;">
             <div class="panel">
                 <div class="panel-head">Asset & Fixed Bill Entry</div>
                 <div class="panel-body">
                     <input type="hidden" id="b-id"> 
-                    
                     <div id="box-asset" class="p-10 border-radius-8 mb-15" style="border:1px solid transparent; transition:0.2s;">
                         <label>Asset Name</label><input type="text" id="b-a-name" class="mb-10" placeholder="E.g. Espresso Machine">
                         <label>Purchase Price (Rp)</label><input type="text" inputmode="decimal" id="b-a-price" class="mb-10" oninput="Utils.formatInput(this)">
                         <label>Useful Life (Months)</label><input type="number" id="b-a-life" placeholder="E.g. 36">
-                        <div class="flex gap-10 mt-10">
-                            <button id="btn-a-save" class="btn btn-primary flex-1" onclick="BOP.save('Asset')">Add Asset</button>
-                            <button class="btn btn-danger btn-b-cancel hidden" onclick="BOP.cancel()">Cancel</button>
-                        </div>
+                        <div class="flex gap-10 mt-10"><button id="btn-a-save" class="btn btn-primary flex-1" onclick="BOP.save('Asset')">Add Asset</button><button class="btn btn-danger btn-b-cancel hidden" onclick="BOP.cancel()">Cancel</button></div>
                     </div>
-                    
                     <div class="border-dashed mb-15"></div>
-                    
                     <div id="box-bill" class="p-10 border-radius-8" style="border:1px solid transparent; transition:0.2s;">
                         <label>Monthly Bill Name</label><input type="text" id="b-b-name" class="mb-10" placeholder="E.g. Electricity & Internet">
                         <label>Monthly Cost (Rp)</label><input type="text" inputmode="decimal" id="b-b-cost" class="mb-10" oninput="Utils.formatInput(this)">
-                        <div class="flex gap-10 mt-10">
-                            <button id="btn-b-save" class="btn btn-warning flex-1" onclick="BOP.save('Bill')">Add Bill</button>
-                            <button class="btn btn-danger btn-b-cancel hidden" onclick="BOP.cancel()">Cancel</button>
-                        </div>
+                        <div class="flex gap-10 mt-10"><button id="btn-b-save" class="btn btn-warning flex-1" onclick="BOP.save('Bill')">Add Bill</button><button class="btn btn-danger btn-b-cancel hidden" onclick="BOP.cancel()">Cancel</button></div>
                     </div>
                 </div>
             </div>
-            
-            <div class="panel flex-col">
-                <div class="info-bar shrink-0"><span>Total Daily Overhead Allocation:</span><span id="b-total-val" class="text-md text-heavy">Rp 0</span></div>
-                <div class="panel-body p-0 scroll-y">
-                    <table id="table-bop"></table>
-                </div>
-            </div>
+            <div class="panel flex-col"><div class="info-bar shrink-0"><span>Total Daily Overhead Allocation:</span><span id="b-total-val" class="text-md text-heavy">Rp 0</span></div><div class="panel-body p-0 scroll-y"><table id="table-bop"></table></div></div>
         </div>
     </section>
 
@@ -371,7 +342,7 @@
         <input type="hidden" id="pi-id">
         <div class="border-dashed mb-10"></div>
         <div id="pi-mods-container" class="mb-15 scroll-y" style="max-height:200px;">
-            <label class="text-muted mb-10">Select Add-ons:</label>
+            <label class="text-muted mb-10">Select Modifiers:</label>
             <div id="pi-mods-list"></div>
         </div>
         <div class="flex gap-10 mt-auto">
@@ -385,73 +356,29 @@
     <div class="modal-content modal-lg">
         <h3 class="text-lg text-heavy mb-15">Global Modifiers & Add-ons</h3>
         <div class="grid gap-15" style="grid-template-columns: 1fr 280px;">
-            <div class="scroll-y border-radius-8" style="border:1px solid var(--border); max-height:400px;">
-                <table id="table-addons"></table>
-            </div>
+            <div class="scroll-y border-radius-8" style="border:1px solid var(--border); max-height:400px;"><table id="table-addons"></table></div>
             <div class="p-10 highlight-box border-radius-8">
                 <input type="hidden" id="mo-id">
-                <label>Add-on Name</label><input type="text" id="mo-name" class="mb-10" placeholder="E.g. Extra Shot">
-                <label>Extra Price (Rp)</label><input type="text" id="mo-price" class="mb-10" oninput="Utils.formatInput(this)">
-                <label>Ingredient Used</label><select id="mo-ing" class="mb-10"></select>
-                <label>Qty Used</label><input type="text" id="mo-qty" class="mb-10" oninput="Utils.formatInput(this)">
-                <button class="btn btn-primary w-100 mt-10" onclick="Mods.save()">SAVE ADD-ON</button>
+                <label>Modifier Name</label><input type="text" id="mo-name" class="mb-10" placeholder="E.g. Extra Shot or Less Sugar">
+                <label>Type</label>
+                <select id="mo-type" class="mb-10">
+                    <option value="add">Add / Extra (+)</option>
+                    <option value="less">Less / Reduce (-)</option>
+                </select>
+                <label>Price Adjustment (Rp)</label><input type="text" id="mo-price" class="mb-10" oninput="Utils.formatInput(this)" placeholder="Usually 0 for Less">
+                <label>Ingredient Modified</label><select id="mo-ing" class="mb-10"></select>
+                <label>Volume/Qty Modified</label><input type="text" id="mo-qty" class="mb-10" oninput="Utils.formatInput(this)">
+                <button class="btn btn-primary w-100 mt-10" onclick="Mods.save()">SAVE MODIFIER</button>
                 <button class="btn btn-danger w-100 mt-5" onclick="UI.hideModal('modal-addons')">CLOSE</button>
             </div>
         </div>
     </div>
 </div>
 
-<div id="modal-shift-open" class="modal">
-    <div class="modal-content">
-        <h3 class="text-lg text-heavy mb-10">Open Register</h3>
-        <p class="text-xs text-muted mb-15">Enter the starting physical cash amount in the drawer.</p>
-        <label>Starting Cash (Rp)</label>
-        <input type="text" inputmode="decimal" id="shift-start-cash" class="text-lg text-heavy mb-15" oninput="Utils.formatInput(this)">
-        <button class="btn btn-primary w-100" style="height:45px;" onclick="Shift.open()">START SHIFT</button>
-    </div>
-</div>
-
-<div id="modal-shift-close" class="modal">
-    <div class="modal-content">
-        <h3 class="text-lg text-heavy mb-10 text-danger">Close Register</h3>
-        <div class="highlight-box mb-15">
-            <div class="flex-between mb-5"><span>Starting Cash:</span><span id="sc-start" class="text-bold"></span></div>
-            <div class="flex-between mb-5"><span>Cash Sales:</span><span id="sc-sales" class="text-bold text-success"></span></div>
-            <div class="border-dashed my-5"></div>
-            <div class="flex-between text-md"><span>Expected Drawer:</span><span id="sc-expected" class="text-heavy text-primary"></span></div>
-        </div>
-        <label>Actual Cash in Drawer (Rp)</label>
-        <input type="text" inputmode="decimal" id="shift-actual-cash" class="text-lg text-heavy mb-15" oninput="Utils.formatInput(this)">
-        <button class="btn btn-danger w-100" style="height:45px;" onclick="Shift.close()">SUBMIT & CLOSE SHIFT</button>
-        <button class="btn bg-transparent text-muted w-100 mt-10" onclick="UI.hideModal('modal-shift-close')">Cancel</button>
-    </div>
-</div>
-
-<div id="modal-shifts-history" class="modal">
-    <div class="modal-content modal-lg">
-        <h3 class="text-lg text-heavy mb-15">Shift History Reports</h3>
-        <div class="flex-1 scroll-y border-radius-8" style="border:1px solid var(--border); min-height:300px; max-height:60vh;">
-            <table id="table-shifts"></table>
-        </div>
-        <button class="btn btn-primary w-100 mt-15" onclick="UI.hideModal('modal-shifts-history')">Close</button>
-    </div>
-</div>
-
-<div id="modal-stock" class="modal">
-    <div class="modal-content">
-        <h3 class="text-lg text-heavy mb-15">Edit Stock Item</h3>
-        <input type="hidden" id="ms-old">
-        <label>Item Name</label><input type="text" id="ms-name" class="mb-10">
-        <label>Base Quantity</label><input type="number" id="ms-qty" class="mb-10">
-        <label>Avg Cost/Unit (Rp)</label><input type="number" id="ms-cost" class="mb-10">
-        <div class="border-dashed mb-10"></div>
-        <label class="text-danger">Low Stock Alert Threshold</label>
-        <input type="number" id="ms-min" class="mb-15" placeholder="0">
-        <button class="btn btn-success w-100 mb-10" onclick="Stock.saveEdit()">Save & Sync Changes</button>
-        <button class="btn btn-danger w-100" onclick="UI.hideModal('modal-stock')">Cancel</button>
-    </div>
-</div>
-
+<div id="modal-shift-open" class="modal"><div class="modal-content"><h3 class="text-lg text-heavy mb-10">Open Register</h3><p class="text-xs text-muted mb-15">Enter the starting physical cash amount in the drawer.</p><label>Starting Cash (Rp)</label><input type="text" inputmode="decimal" id="shift-start-cash" class="text-lg text-heavy mb-15" oninput="Utils.formatInput(this)"><button class="btn btn-primary w-100" style="height:45px;" onclick="Shift.open()">START SHIFT</button></div></div>
+<div id="modal-shift-close" class="modal"><div class="modal-content"><h3 class="text-lg text-heavy mb-10 text-danger">Close Register</h3><div class="highlight-box mb-15"><div class="flex-between mb-5"><span>Starting Cash:</span><span id="sc-start" class="text-bold"></span></div><div class="flex-between mb-5"><span>Cash Sales:</span><span id="sc-sales" class="text-bold text-success"></span></div><div class="border-dashed my-5"></div><div class="flex-between text-md"><span>Expected Drawer:</span><span id="sc-expected" class="text-heavy text-primary"></span></div></div><label>Actual Cash in Drawer (Rp)</label><input type="text" inputmode="decimal" id="shift-actual-cash" class="text-lg text-heavy mb-15" oninput="Utils.formatInput(this)"><button class="btn btn-danger w-100" style="height:45px;" onclick="Shift.close()">SUBMIT & CLOSE SHIFT</button><button class="btn bg-transparent text-muted w-100 mt-10" onclick="UI.hideModal('modal-shift-close')">Cancel</button></div></div>
+<div id="modal-shifts-history" class="modal"><div class="modal-content modal-lg"><h3 class="text-lg text-heavy mb-15">Shift History Reports</h3><div class="flex-1 scroll-y border-radius-8" style="border:1px solid var(--border); min-height:300px; max-height:60vh;"><table id="table-shifts"></table></div><button class="btn btn-primary w-100 mt-15" onclick="UI.hideModal('modal-shifts-history')">Close</button></div></div>
+<div id="modal-stock" class="modal"><div class="modal-content"><h3 class="text-lg text-heavy mb-15">Edit Stock Item</h3><input type="hidden" id="ms-old"><label>Item Name</label><input type="text" id="ms-name" class="mb-10"><label>Base Quantity</label><input type="number" id="ms-qty" class="mb-10"><label>Avg Cost/Unit (Rp)</label><input type="number" id="ms-cost" class="mb-10"><div class="border-dashed mb-10"></div><label class="text-danger">Low Stock Alert Threshold</label><input type="number" id="ms-min" class="mb-15" placeholder="0"><button class="btn btn-success w-100 mb-10" onclick="Stock.saveEdit()">Save & Sync Changes</button><button class="btn btn-danger w-100" onclick="UI.hideModal('modal-stock')">Cancel</button></div></div>
 <div id="modal-receipt" class="modal"><div class="modal-content"><div class="receipt text-center mb-15 shrink-0"><div class="text-md text-heavy mb-5 letter-spacing-1">TEPI KOPI</div><div class="flex-between text-xs mb-5"><span>ID:</span><span id="r-id"></span></div><div id="r-items" class="text-left mb-10"></div><div class="flex-between text-md text-heavy mb-10"><span>TOTAL</span><span id="r-total"></span></div></div><button class="btn btn-primary w-100" onclick="window.print()">PRINT RECEIPT</button><button class="btn btn-danger w-100 mt-10" onclick="UI.hideModal('modal-receipt')">CLOSE</button></div></div>
 <div id="modal-products" class="modal"><div class="modal-content modal-lg"><table id="table-products"></table><button class="btn btn-primary w-100" onclick="UI.hideModal('modal-products')">Close</button></div></div>
 
@@ -490,7 +417,11 @@ const UI = {
         document.getElementById(id).classList.add('active');
         const idx = ['pos','sales','menu','stock','purchases','bop'].indexOf(id);
         if(idx >= 0) document.querySelectorAll('.side-btn')[idx].classList.add('active');
-        if(id === 'pos') POS.init(); if(id === 'menu') Menu.init(); if(id === 'stock') Stock.render(); if(id === 'sales') Sales.render();
+        if(id === 'pos') POS.init(); 
+        if(id === 'menu') Menu.init(); 
+        if(id === 'stock') Stock.render(); 
+        if(id === 'sales') Sales.render();
+        if(id === 'purchases') Purchases.render();
     },
     showModal: (id) => document.getElementById(id).style.display = 'flex',
     hideModal: (id) => document.getElementById(id).style.display = 'none',
@@ -570,18 +501,21 @@ const Mods = {
         Mods.render(); UI.showModal('modal-addons');
     },
     render: () => {
-        let html = `<thead><tr><th>Add-on Name</th><th>Price</th><th>Stock Link</th><th class="text-right">Action</th></tr></thead><tbody>`;
+        let html = `<thead><tr><th>Modifier Name</th><th>Price Effect</th><th>Stock Link</th><th class="text-right">Action</th></tr></thead><tbody>`;
         Object.entries(Store.state.modifiers).forEach(([id, m]) => {
-            html += `<tr><td class="text-bold">${m.name}</td><td class="text-success text-bold">+Rp ${Utils.fmt(m.price)}</td><td>${m.ingName ? `${m.ingQty} ${Stock.getAgg()[m.ingName]?.useUnit||''}` : '-'}</td>
+            let typeBadge = m.type === 'less' ? `<span class="badge bg-warning text-white">- LESS</span>` : `<span class="badge bg-success text-white">+ ADD</span>`;
+            let priceStr = m.price !== 0 ? (m.type === 'less' && m.price < 0 ? '' : '+') + `Rp ${Utils.fmt(m.price)}` : 'Free';
+            html += `<tr><td class="text-bold">${m.name} ${typeBadge}</td><td class="text-bold">${priceStr}</td><td>${m.ingName ? `${m.ingQty} ${Stock.getAgg()[m.ingName]?.useUnit||''}` : '-'}</td>
                      <td class="text-right"><button class="btn-icon btn-danger" onclick="Mods.del('${id}')">🗑️</button></td></tr>`;
         });
         UI.html('table-addons', html + '</tbody>');
     },
     save: () => {
         let id = UI.val('mo-id') || 'mod_' + Date.now();
-        let name = UI.val('mo-name'), price = Utils.num(UI.val('mo-price')), ingName = UI.val('mo-ing'), ingQty = Utils.num(UI.val('mo-qty'));
+        let name = UI.val('mo-name'), type = UI.val('mo-type'), price = Utils.num(UI.val('mo-price')), ingName = UI.val('mo-ing'), ingQty = Utils.num(UI.val('mo-qty'));
         if(!name) return alert("Fill Name");
-        Store.state.modifiers[id] = { name, price, ingName, ingQty };
+        if(type === 'less' && price > 0) price = -Math.abs(price); // If they type a number for "Less", default it to a negative price effect (discount). If 0, it stays 0.
+        Store.state.modifiers[id] = { name, type, price, ingName, ingQty };
         Store.save(); Mods.render(); UI.val('mo-name',''); UI.val('mo-price',''); UI.val('mo-qty','');
     },
     del: (id) => { delete Store.state.modifiers[id]; Store.save(); Mods.render(); }
@@ -607,9 +541,11 @@ const POS = {
         let m = Store.state.menus[id]; UI.text('pi-name', m.name); UI.text('pi-price', `Rp ${Utils.fmt(m.sellPrice)}`); UI.val('pi-id', id);
         let html = '';
         Object.entries(Store.state.modifiers).forEach(([modId, mod]) => {
-            html += `<label class="flex align-center p-10 border-bottom bg-white border-radius-8 mb-5" style="border:1px solid var(--border);"><input type="checkbox" class="pos-mod-chk" value="${modId}"> <div class="flex-1 text-bold">${mod.name}</div><div class="text-success text-bold">+${Utils.fmt(mod.price)}</div></label>`;
+            let pStr = mod.price !== 0 ? (mod.price > 0 ? `+${Utils.fmt(mod.price)}` : `${Utils.fmt(mod.price)}`) : 'Free';
+            let tColor = mod.type === 'less' ? 'text-warning' : 'text-success';
+            html += `<label class="flex align-center p-10 border-bottom bg-white border-radius-8 mb-5" style="border:1px solid var(--border);"><input type="checkbox" class="pos-mod-chk" value="${modId}"> <div class="flex-1 text-bold">${mod.name}</div><div class="${tColor} text-bold">${pStr}</div></label>`;
         });
-        UI.html('pi-mods-list', html || '<span class="text-xs text-muted">No global add-ons configured.</span>');
+        UI.html('pi-mods-list', html || '<span class="text-xs text-muted">No global modifiers configured.</span>');
         UI.showModal('modal-pos-item');
     },
     confirmAdd: () => {
@@ -621,10 +557,21 @@ const POS = {
             let m = Store.state.modifiers[chk.value];
             if(m) {
                 checkedMods.push(m.name);
-                modPrice += m.price;
-                if(m.ingName && agg[m.ingName]) {
-                    modHPP += m.ingQty * agg[m.ingName].avgCost;
-                    modIngs.push({ name: m.ingName, qty: m.ingQty, waste: 0 });
+                let p = m.price || 0;
+                let q = m.ingQty || 0;
+                
+                modPrice += p; // P is already correctly positive/negative based on save logic
+                
+                if(m.type === 'less') {
+                    if(m.ingName && agg[m.ingName]) {
+                        modHPP -= q * agg[m.ingName].avgCost; // Reduce HPP
+                        modIngs.push({ name: m.ingName, qty: -q, waste: 0 }); // Negative quantity pushes stock back!
+                    }
+                } else {
+                    if(m.ingName && agg[m.ingName]) {
+                        modHPP += q * agg[m.ingName].avgCost; // Increase HPP
+                        modIngs.push({ name: m.ingName, qty: q, waste: 0 }); // Regular deduction
+                    }
                 }
             }
         });
@@ -881,11 +828,70 @@ const Sales = {
 };
 
 const Purchases = {
-    render: () => { let html = `<thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th class="text-right">Actions</th></tr></thead><tbody>`, total = 0; [...Store.state.purchases].sort((a,b)=>b.date.localeCompare(a.date)).forEach(p => { total += p.cost; html += `<tr><td><b class="text-dark">${p.date}</b></td><td>${p.name}</td><td><span class="badge">${p.category}</span></td><td class="text-danger text-bold">Rp ${Utils.fmt(p.cost)}</td><td class="text-right"><div class="flex gap-5" style="justify-content:flex-end"><button class="btn-icon btn-warning" onclick="Purchases.edit(${p.id})">✏️</button><button class="btn-icon btn-danger" onclick="Purchases.del(${p.id})">🗑️</button></div></td></tr>`; }); UI.html('table-purchases', html + '</tbody>'); UI.text('p-total-val', `Rp ${Utils.fmt(total)}`); },
-    save: () => { let id = UI.val('p-id'), d = UI.val('p-date'), n = UI.val('p-desc').trim(), cat = UI.val('p-cat'), c = Utils.num(UI.val('p-cost')); if(!d || !n || !c) return alert("Fill date, desc, cost."); if(id) { let i = Store.state.purchases.findIndex(x => x.id == id); if(i > -1) Store.state.purchases[i] = { id: parseInt(id), date: d, name: n, category: cat, cost: c }; Purchases.cancel(); } else { Store.state.purchases.push({ id: Date.now(), date: d, name: n, category: cat, cost: c }); UI.val('p-desc', ''); UI.val('p-cost', ''); } Store.save(); Purchases.render(); },
-    edit: (id) => { let p = Store.state.purchases.find(x => x.id === id); if(!p) return; UI.val('p-id', p.id); UI.val('p-date', p.date); UI.val('p-desc', p.name); UI.val('p-cat', p.category); UI.val('p-cost', Utils.fmt(p.cost)); document.getElementById('btn-p-save').innerText = "UPDATE"; document.getElementById('btn-p-save').className = "btn btn-warning flex-1"; document.getElementById('btn-p-cancel').classList.remove('hidden'); },
-    cancel: () => { UI.val('p-id', ''); UI.val('p-desc', ''); UI.val('p-cost', ''); UI.val('p-date', Utils.today()); document.getElementById('btn-p-save').innerText = "RECORD"; document.getElementById('btn-p-save').className = "btn btn-primary flex-1"; document.getElementById('btn-p-cancel').classList.add('hidden'); },
-    del: (id) => { if(confirm("Delete expense?")) { Store.state.purchases = Store.state.purchases.filter(p => p.id !== id); Store.save(); Purchases.render(); } }
+    render: () => { 
+        let html = `<thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th class="text-right">Actions</th></tr></thead><tbody>`, total = 0; 
+        [...Store.state.purchases].sort((a,b)=>b.date.localeCompare(a.date)).forEach(p => { 
+            total += p.cost; 
+            html += `<tr><td><b class="text-dark">${p.date}</b></td><td>${p.name}</td><td><span class="badge">${p.category}</span></td><td class="text-danger text-bold">Rp ${Utils.fmt(p.cost)}</td><td class="text-right"><div class="flex gap-5" style="justify-content:flex-end"><button class="btn-icon btn-warning" onclick="Purchases.edit(${p.id})">✏️</button><button class="btn-icon btn-danger" onclick="Purchases.del(${p.id})">🗑️</button></div></td></tr>`; 
+        }); 
+        UI.html('table-purchases', html + '</tbody>'); 
+        UI.text('p-total-val', `Rp ${Utils.fmt(total)}`); 
+        
+        // Populate Inventory Dropdown
+        let agg = Stock.getAgg(), sel = document.getElementById('p-sel');
+        if (sel) {
+            let currentVal = sel.value;
+            sel.innerHTML = '<option value="">-- Select Item --</option><option value="NEW" class="text-accent text-bold">+ ADD NEW EXPENSE</option>';
+            Object.keys(agg).forEach(k => sel.add(new Option(k,k)));
+            sel.value = currentVal || '';
+            Purchases.handleSel();
+        }
+    },
+    handleSel: () => {
+        let v = UI.val('p-sel');
+        document.getElementById('p-new').classList.toggle('hidden', v !== 'NEW');
+    },
+    save: () => { 
+        let id = UI.val('p-id'), d = UI.val('p-date');
+        let selVal = UI.val('p-sel');
+        let n = selVal === 'NEW' ? UI.val('p-new').trim() : selVal;
+        let cat = UI.val('p-cat'), c = Utils.num(UI.val('p-cost')); 
+        
+        if(!d || !n || !c) return alert("Fill date, desc, cost."); 
+        
+        if(id) { 
+            let i = Store.state.purchases.findIndex(x => x.id == id); 
+            if(i > -1) Store.state.purchases[i] = { id: parseInt(id), date: d, name: n, category: cat, cost: c }; 
+            Purchases.cancel(); 
+        } else { 
+            Store.state.purchases.push({ id: Date.now(), date: d, name: n, category: cat, cost: c }); 
+            UI.val('p-sel', ''); UI.val('p-new', ''); UI.val('p-cost', ''); Purchases.handleSel();
+        } 
+        Store.save(); Purchases.render(); 
+    },
+    edit: (id) => { 
+        let p = Store.state.purchases.find(x => x.id === id); if(!p) return; 
+        UI.val('p-id', p.id); UI.val('p-date', p.date); UI.val('p-cat', p.category); UI.val('p-cost', Utils.fmt(p.cost)); 
+        
+        let opts = Array.from(document.getElementById('p-sel').options).map(o => o.value);
+        if(opts.includes(p.name)) {
+            UI.val('p-sel', p.name);
+            UI.val('p-new', '');
+        } else {
+            UI.val('p-sel', 'NEW');
+            UI.val('p-new', p.name);
+        }
+        Purchases.handleSel();
+        
+        document.getElementById('btn-p-save').innerText = "UPDATE"; document.getElementById('btn-p-save').className = "btn btn-warning flex-1"; document.getElementById('btn-p-cancel').classList.remove('hidden'); 
+    },
+    cancel: () => { 
+        UI.val('p-id', ''); UI.val('p-sel', ''); UI.val('p-new', ''); UI.val('p-cost', ''); UI.val('p-date', Utils.today()); 
+        Purchases.handleSel();
+        document.getElementById('btn-p-save').innerText = "RECORD"; document.getElementById('btn-p-save').className = "btn btn-primary flex-1"; document.getElementById('btn-p-cancel').classList.add('hidden'); 
+    },
+    del: (id) => { if(confirm("Delete expense?")) { Store.state.purchases = Store.state.purchases.filter(p => p.id !== id); Store.save(); Purchases.render(); } },
+    export: () => { let rows = [["Date", "Description", "Category", "Cost"]]; Store.state.purchases.forEach(p => rows.push([p.date, p.name, p.category, p.cost])); DataBackup.xlsx(rows, "TK_Expenses"); }
 };
 
 const BOP = {
@@ -910,7 +916,7 @@ UI.nav('pos');
 
 <script>
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(() => console.log('v59 SW Registered'));
+        navigator.serviceWorker.register('sw.js').then(() => console.log('v60 SW Registered'));
     }
 </script>
 </body>
