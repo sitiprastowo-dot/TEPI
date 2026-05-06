@@ -300,32 +300,69 @@
     </section>
 
     <section id="purchases" class="section">
-        <div class="flex-between mb-15 shrink-0"><h2 class="text-xl text-heavy">Expenses History</h2></div>
+        <div class="flex-between mb-15 shrink-0">
+            <h2 class="text-xl text-heavy">Expenses History</h2>
+            <button class="btn btn-success btn-sm" onclick="Purchases.export()">Export History</button>
+        </div>
         <div class="grid gap-15 flex-1" style="grid-template-columns: 1fr 320px;">
-            <div class="panel flex-col"><div class="info-bar shrink-0"><span>Total Logged Expenses:</span><span id="p-total-val">Rp 0</span></div><div class="panel-body p-0 scroll-y"><table id="table-purchases"></table></div></div>
+            <div class="panel flex-col">
+                <div class="info-bar shrink-0"><span>Total Logged Expenses:</span><span id="p-total-val">Rp 0</span></div>
+                <div class="panel-body p-0 scroll-y"><table id="table-purchases"></table></div>
+            </div>
             <div class="panel p-15 flex-col">
                 <h3 class="text-md text-heavy mb-15 shrink-0">Record Expense</h3>
                 <input type="hidden" id="p-id"><label>Date</label><input type="date" id="p-date" class="mb-15"><label>Description</label><input type="text" id="p-desc" class="mb-15">
-                <label>Category</label><select id="p-cat" class="mb-15"><option value="Operational">Operational</option><option value="Equipment">Equipment</option></select>
-                <label>Total Cost</label><input type="text" id="p-cost" class="text-lg text-heavy mb-15" oninput="Utils.formatInput(this)">
+                <label>Category</label><select id="p-cat" class="mb-15"><option value="Operational">Operational</option><option value="Equipment">Equipment</option><option value="Raw Material">Raw Material</option><option value="Packaging">Packaging</option><option value="Other">Other</option></select>
+                <label>Total Cost (Rp)</label><input type="text" id="p-cost" class="text-lg text-heavy mb-15" oninput="Utils.formatInput(this)">
                 <div class="flex gap-10 mt-auto shrink-0"><button id="btn-p-save" class="btn btn-primary flex-1" onclick="Purchases.save()">RECORD</button><button id="btn-p-cancel" class="btn btn-danger hidden shrink-0" onclick="Purchases.cancel()">CANCEL</button></div>
             </div>
         </div>
     </section>
 
     <section id="bop" class="section">
-        <div class="flex-between mb-15 shrink-0"><h2 class="text-xl text-heavy">Overhead & Depreciation</h2></div>
+        <div class="flex-between mb-15 shrink-0">
+            <h2 class="text-xl text-heavy">Overhead & Depreciation</h2>
+            <button class="btn btn-warning btn-sm" onclick="BOP.export()">Export Overhead</button>
+        </div>
+
         <div class="grid gap-15 flex-1" style="grid-template-columns: 350px 1fr;">
             <div class="panel">
-                <div class="panel-head">Asset & Bill Entry</div>
-                <div class="panel-body"><input type="hidden" id="b-id"> 
-                    <div id="box-bill" class="p-10 border-radius-8"><label>Monthly Bill Name</label><input type="text" id="b-b-name" class="mb-10"><label>Monthly Cost</label><input type="text" id="b-b-cost" class="mb-10" oninput="Utils.formatInput(this)">
-                    <div class="flex gap-10 mt-10"><button id="btn-b-save" class="btn btn-warning flex-1" onclick="BOP.save('Bill')">Add Bill</button><button class="btn btn-danger btn-b-cancel hidden" onclick="BOP.cancel()">Cancel</button></div></div>
+                <div class="panel-head">Asset & Fixed Bill Entry</div>
+                <div class="panel-body">
+                    <input type="hidden" id="b-id"> 
+                    
+                    <div id="box-asset" class="p-10 border-radius-8 mb-15" style="border:1px solid transparent; transition:0.2s;">
+                        <label>Asset Name</label><input type="text" id="b-a-name" class="mb-10" placeholder="E.g. Espresso Machine">
+                        <label>Purchase Price (Rp)</label><input type="text" inputmode="decimal" id="b-a-price" class="mb-10" oninput="Utils.formatInput(this)">
+                        <label>Useful Life (Months)</label><input type="number" id="b-a-life" placeholder="E.g. 36">
+                        <div class="flex gap-10 mt-10">
+                            <button id="btn-a-save" class="btn btn-primary flex-1" onclick="BOP.save('Asset')">Add Asset</button>
+                            <button class="btn btn-danger btn-b-cancel hidden" onclick="BOP.cancel()">Cancel</button>
+                        </div>
+                    </div>
+                    
+                    <div class="border-dashed mb-15"></div>
+                    
+                    <div id="box-bill" class="p-10 border-radius-8" style="border:1px solid transparent; transition:0.2s;">
+                        <label>Monthly Bill Name</label><input type="text" id="b-b-name" class="mb-10" placeholder="E.g. Electricity & Internet">
+                        <label>Monthly Cost (Rp)</label><input type="text" inputmode="decimal" id="b-b-cost" class="mb-10" oninput="Utils.formatInput(this)">
+                        <div class="flex gap-10 mt-10">
+                            <button id="btn-b-save" class="btn btn-warning flex-1" onclick="BOP.save('Bill')">Add Bill</button>
+                            <button class="btn btn-danger btn-b-cancel hidden" onclick="BOP.cancel()">Cancel</button>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="panel flex-col"><div class="info-bar shrink-0"><span>Total Daily Overhead:</span><span id="b-total-val">Rp 0</span></div><div class="panel-body p-0 scroll-y"><table id="table-bop"></table></div></div>
+            
+            <div class="panel flex-col">
+                <div class="info-bar shrink-0"><span>Total Daily Overhead Allocation:</span><span id="b-total-val" class="text-md text-heavy">Rp 0</span></div>
+                <div class="panel-body p-0 scroll-y">
+                    <table id="table-bop"></table>
+                </div>
+            </div>
         </div>
     </section>
+
 </main>
 
 <div id="modal-pos-item" class="modal">
@@ -665,7 +702,6 @@ const POS = {
     }
 };
 
-/* SYNC ENGINE & STOCK ALERT HIGHLIGHTING */
 const Sync = {
     recalculateAll: () => {
         let agg = Stock.getAgg();
@@ -702,7 +738,6 @@ const Stock = {
 
         let html = `<thead><tr><th>Item</th><th>Stock</th><th>Avg Cost</th><th>Value</th><th class="text-right">Actions</th></tr></thead><tbody>`;
         Object.entries(agg).forEach(([k, v]) => {
-            // LOW STOCK ALERT LOGIC
             let min = Store.state.stockDefs[k]?.min || 0;
             let isLow = (v.base <= min && min > 0);
             let lowBadge = isLow ? `<span class="text-danger text-heavy ml-5">⚠️ LOW</span>` : '';
@@ -719,14 +754,13 @@ const Stock = {
     adj: (name) => { let agg = Stock.getAgg(), item = agg[name], val = parseFloat(prompt(`Adjust ${name} (+/-):\nCurrent: ${item.base} ${item.useUnit}`)); if(!isNaN(val) && val !== 0) { Store.state.stock.push({ id: Date.now(), name, type: 'adjustment', buyQty: 0, totalVal: val*item.avgCost, totalBaseUnits: val, useUnit: item.useUnit }); Store.save(); Sync.recalculateAll(); Stock.render(); } },
     edit: (name) => { 
         let item = Stock.getAgg()[name]; UI.val('ms-old', name); UI.val('ms-name', name); UI.val('ms-qty', item.base); UI.val('ms-cost', item.avgCost.toFixed(2)); 
-        UI.val('ms-min', Store.state.stockDefs[name]?.min || ''); // Load threshold
+        UI.val('ms-min', Store.state.stockDefs[name]?.min || ''); 
         UI.showModal('modal-stock'); 
     },
     saveEdit: () => { 
         let old = UI.val('ms-old'), cur = UI.val('ms-name'), q = parseFloat(UI.val('ms-qty')), c = parseFloat(UI.val('ms-cost')), min = parseFloat(UI.val('ms-min'))||0; 
         if(!cur || isNaN(q) || isNaN(c)) return alert("Invalid Input"); 
         
-        // Save threshold
         Store.state.stockDefs[cur] = { min };
 
         if(old !== cur) { 
@@ -743,7 +777,6 @@ const Stock = {
     export: () => { let rows = [["Item Name", "Total Stock", "Unit", "Min Alert", "Avg Cost/Unit", "Asset Value"]]; Object.entries(Stock.getAgg()).forEach(([k,v]) => rows.push([k, v.base, v.useUnit, Store.state.stockDefs[k]?.min||0, v.avgCost.toFixed(2), v.val])); DataBackup.xlsx(rows, "TK_Inventory_Report"); }
 };
 
-// ... (Menu, Sales, BOP, Purchases exist identical to logic provided previously)
 const Menu = {
     activeId: null,
     init: () => {
@@ -763,10 +796,7 @@ const Menu = {
     create: () => { UI.val('menu-select', 'new'); Menu.load(); },
     delete: () => { 
         if(!Menu.activeId || Menu.activeId === 'new' || !Store.state.menus[Menu.activeId]) return; 
-        if(confirm('Delete menu permanently?')) { 
-            delete Store.state.menus[Menu.activeId]; 
-            Store.save(); Menu.init(); Menu.create(); 
-        } 
+        if(confirm('Delete menu permanently?')) { delete Store.state.menus[Menu.activeId]; Store.save(); Menu.init(); Menu.create(); } 
     },
     addIngredient: (data = {name:'', qty:0, waste:0}) => {
         let agg = Stock.getAgg(), tr = document.createElement('tr'); tr.className = 'ing-row';
@@ -801,8 +831,7 @@ const Menu = {
         if(!Menu.activeId) return;
         let ings = Array.from(document.querySelectorAll('.ing-row')).map(r => ({ name: r.querySelector('.i-name').value, qty: Utils.num(r.querySelector('.i-qty').value), waste: Utils.num(r.querySelector('.i-waste').value) })).filter(i => i.name);
         Store.state.menus[Menu.activeId] = { name: UI.val('m-name'), sellPrice: Utils.num(UI.val('m-price')), order: parseInt(UI.val('m-order')) || 0, ings, hpp: 0 };
-        Store.save(); 
-        Sync.recalculateAll();
+        Store.save(); Sync.recalculateAll();
         alert('Menu Saved!'); Menu.init(); UI.val('menu-select', Menu.activeId); Menu.load();
     },
     export: () => { let rows = [["Menu Name", "Sell Price", "Ingredient", "Unit", "Qty Required", "Waste %", "Cost Contrib"]]; let agg = Stock.getAgg(); Object.values(Store.state.menus).forEach(m => { if(!m.ings || !m.ings.length) rows.push([m.name, m.sellPrice, "NONE", "-", 0, 0, 0]); else m.ings.forEach(i => rows.push([m.name, m.sellPrice, i.name, agg[i.name]?.useUnit||'-', i.qty, i.waste, (i.qty * (agg[i.name]?.avgCost||0) * (1+(i.waste/100))) ])); }); DataBackup.xlsx(rows, "Menu_HPP_Analysis"); }
