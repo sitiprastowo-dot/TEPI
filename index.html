@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TK POS - Version 64</title>
+    <title>TK POS - Version 65</title>
     
     <meta name="theme-color" content="#0f172a">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/924/924514.png">
@@ -105,7 +105,8 @@
 
         .modal { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
         .modal-content { background: white; width: 380px; padding: 20px; border-radius: 16px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.3); max-height: 90vh; display: flex; flex-direction: column; }
-        .modal-lg { width: 700px; }
+        /* v65: Expanded modal size for complex tables */
+        .modal-lg { width: 850px; max-width: 95vw; }
         
         .receipt { font-family: 'Space Mono', monospace; color: #1e293b; font-size: 11px; }
         .letter-spacing-1 { letter-spacing: 1px; }
@@ -377,8 +378,10 @@
 <div id="modal-addons" class="modal">
     <div class="modal-content modal-lg">
         <h3 class="text-lg text-heavy mb-15">Global Modifiers & Add-ons</h3>
-        <div class="grid gap-15" style="grid-template-columns: 1fr 280px;">
-            <div class="scroll-y border-radius-8" style="border:1px solid var(--border); max-height:400px;"><table id="table-addons"></table></div>
+        <div class="grid gap-15 align-start" style="grid-template-columns: 1fr 280px;">
+            <div class="scroll-y border-radius-8" style="border:1px solid var(--border); max-height:400px; overflow-x: auto;">
+                <table id="table-addons"></table>
+            </div>
             <div class="p-10 highlight-box border-radius-8">
                 <input type="hidden" id="mo-id">
                 <label>Modifier Name</label><input type="text" id="mo-name" class="mb-10" placeholder="E.g. Extra Shot or Less Sugar">
@@ -554,7 +557,8 @@ const Mods = {
         Mods.render(); UI.showModal('modal-addons');
     },
     render: () => {
-        let html = `<thead><tr><th style="white-space:nowrap;">Modifier Name</th><th>Price Effect</th><th>Stock Link</th><th class="text-right">Action</th></tr></thead><tbody>`;
+        // v65: Added min-width to Action column to protect buttons from being squished
+        let html = `<thead><tr><th style="white-space:nowrap;">Modifier Name</th><th>Price Effect</th><th>Stock Link</th><th class="text-right" style="min-width: 80px;">Action</th></tr></thead><tbody>`;
         Object.entries(Store.state.modifiers).forEach(([id, m]) => {
             let typeBadge = m.type === 'less' ? `<span class="badge bg-warning text-white">- LESS</span>` : `<span class="badge bg-success text-white">+ ADD</span>`;
             let priceStr = m.price !== 0 ? (m.type === 'less' && m.price < 0 ? '' : '+') + `Rp ${Utils.fmt(m.price)}` : 'Free';
@@ -682,7 +686,6 @@ const POS = {
             
             let modStr = '';
             if (it.appliedMods && it.appliedMods.length > 0) {
-                // Ensure it reads correctly even if loading legacy string data
                 modStr = `<div class="text-xs text-muted mt-5" style="padding-left: 8px; border-left: 2px solid var(--accent);">` + 
                          it.appliedMods.map(m => `↳ ${m.name || m}`).join('<br>') + 
                          `</div>`;
@@ -742,7 +745,6 @@ const POS = {
         let receiptHtml = POS.cart.map(i => {
             let modReceipt = '';
             if (i.appliedMods && i.appliedMods.length > 0) {
-                // v64: Force single line using truncate, italic font, asterisk, and nicknames
                 modReceipt = `<br><span class="truncate" style="font-size:10px; color:#555; display:block; margin-top:2px; max-width: 100%;">` + 
                              i.appliedMods.map(m => `<i>* ${m.nick || m.name || m}</i>`).join(', ') + 
                              `</span>`;
