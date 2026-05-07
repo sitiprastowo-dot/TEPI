@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TK POS - Version 61</title>
+    <title>TK POS - Version 62</title>
     
     <meta name="theme-color" content="#0f172a">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/924/924514.png">
@@ -49,7 +49,6 @@
         .shrink-0 { flex-shrink: 0; } .flex-1 { flex: 1; min-height: 0; overflow: hidden; }
         .scroll-y { overflow-y: auto; overflow-x: hidden; position: relative; }
         .border-bottom { border-bottom: 1px solid var(--border); } .border-dashed { border-bottom: 1px dashed var(--border); } .border-radius-8 { border-radius: 8px; }
-        .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         .sidebar { width: 80px; background: var(--primary); padding: 15px 10px; color: white; flex-shrink: 0; z-index: 50; height: 100dvh; display: flex; flex-direction: column; overflow-y: auto; }
         .logo-icon { width: 40px; height: 40px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 900; box-shadow: 0 0 15px rgba(59,130,246,0.4); margin: 0 auto 25px; }
@@ -69,6 +68,17 @@
         input, select { padding: 10px; border: 1px solid var(--border); border-radius: 8px; width: 100%; font-size: 13px; font-family: inherit; color: var(--text-dark); font-weight: 500; transition: 0.2s; background: white; }
         input:focus, select:focus { border-color: var(--accent); outline: none; }
         input[type="checkbox"] { width: auto; transform: scale(1.3); margin-right: 10px; cursor: pointer; }
+        
+        /* v62: Fixed select dropdown overlap by forcing custom arrow and right padding */
+        select { 
+            padding-right: 35px; 
+            appearance: none; 
+            -webkit-appearance: none; 
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'); 
+            background-repeat: no-repeat; 
+            background-position: right 10px center; 
+        }
+
         label { font-size: 10px; font-weight: 700; color: var(--muted); margin-bottom: 4px; display: block; text-transform: uppercase; }
         
         .btn { padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 12px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
@@ -102,7 +112,6 @@
         
         #shift-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(5px); z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-radius: 12px; }
 
-        /* PRINT STYLES - Hides the app, only shows the receipt */
         @media print {
             body * { visibility: hidden; }
             #print-area, #print-area * { visibility: visible; color: #000 !important; }
@@ -295,7 +304,7 @@
             <div class="panel flex-col">
                 <div class="info-bar shrink-0"><span>Total Logged Expenses:</span><span id="p-total-val">Rp 0</span></div>
                 <div class="panel-body p-0 scroll-y">
-                    <table id="table-purchases" style="table-layout: fixed;"></table>
+                    <table id="table-purchases"></table>
                 </div>
             </div>
             <div class="panel p-15 flex-col">
@@ -555,8 +564,8 @@ const Mods = {
                         <td>${m.ingName ? `${m.ingQty} ${Stock.getAgg()[m.ingName]?.useUnit||''}` : '-'}</td>
                         <td class="text-right">
                             <div class="flex gap-5" style="justify-content:flex-end">
-                                <button class="btn-icon btn-warning" onclick="Mods.edit('${id}')" title="Edit">✏️</button>
-                                <button class="btn-icon btn-danger" onclick="Mods.del('${id}')" title="Delete">🗑️</button>
+                                <button class="btn-icon btn-warning flex-center" onclick="Mods.edit('${id}')" title="Edit">✏️</button>
+                                <button class="btn-icon btn-danger flex-center" onclick="Mods.del('${id}')" title="Delete">🗑️</button>
                             </div>
                         </td>
                      </tr>`;
@@ -683,9 +692,9 @@ const POS = {
                                 ${modStr}
                             </div>
                             <div class="flex-center gap-5">
-                                <button class="btn-icon btn-accent" onclick="POS.update(${i}, -1)">-</button>
+                                <button class="btn-icon btn-accent flex-center" onclick="POS.update(${i}, -1)">-</button>
                                 <span class="text-sm text-bold text-center" style="width:16px;">${it.qty}</span>
-                                <button class="btn-icon btn-accent" onclick="POS.update(${i}, 1)">+</button>
+                                <button class="btn-icon btn-accent flex-center" onclick="POS.update(${i}, 1)">+</button>
                             </div>
                             <div class="text-sm text-bold text-right ml-10" style="min-width:60px;">${Utils.fmt(bTotal)}</div>
                         </div>
@@ -721,14 +730,18 @@ const POS = {
 
         // RECEIPT RENDER LOGIC
         UI.text('r-id', sale.id);
-        UI.text('r-date', `${sale.date} ${sale.time}`);
+        
+        // Convert Date format for receipt
+        let [rY, rM, rD] = sale.date.split('-');
+        UI.text('r-date', `${rD}-${rM}-${rY} ${sale.time}`);
+        
         UI.text('r-cust', sale.customer);
         
         let receiptHtml = POS.cart.map(i => {
             let modReceipt = '';
             if (i.appliedMods && i.appliedMods.length > 0) {
-                modReceipt = `<br><span style="font-size:10px; color:#555; font-style: italic;">` + 
-                             i.appliedMods.map(m => `  - ${m}`).join('<br>') + 
+                modReceipt = `<br><span style="font-size:10px; color:#555; font-style: normal;">` + 
+                             i.appliedMods.map(m => `  * ${m}`).join('<br>') + 
                              `</span>`;
             }
             return `<div class="flex-between mb-5 align-top">
@@ -803,7 +816,7 @@ const Stock = {
             let rowStyle = isLow ? `background: #fef2f2;` : '';
 
             html += `<tr style="${rowStyle}"><td class="text-bold">${k} ${lowBadge}</td><td class="${isLow?'text-danger text-heavy':''}">${Utils.fmt(v.base)} ${v.useUnit}</td><td>Rp ${v.avgCost.toFixed(2)}</td><td>Rp ${Utils.fmt(v.val)}</td>
-                <td class="text-right"><div class="flex gap-5" style="justify-content:flex-end"><button class="btn-icon btn-warning" onclick="Stock.edit('${k}')">✏️</button><button class="btn-icon btn-primary" onclick="Stock.adj('${k}')">±</button><button class="btn-icon btn-danger" onclick="Stock.del('${k}')">🗑️</button></div></td></tr>`;
+                <td class="text-right"><div class="flex gap-5" style="justify-content:flex-end"><button class="btn-icon btn-warning flex-center" onclick="Stock.edit('${k}')">✏️</button><button class="btn-icon btn-primary flex-center" onclick="Stock.adj('${k}')">±</button><button class="btn-icon btn-danger flex-center" onclick="Stock.del('${k}')">🗑️</button></div></td></tr>`;
         });
         UI.html('table-stock', html + '</tbody>');
     },
@@ -942,18 +955,23 @@ const Sales = {
 // COMPACT PURCHASES (EXPENSE) RENDER LOGIC
 const Purchases = {
     render: () => { 
-        let html = `<thead><tr><th class="p-5 text-xs">Date</th><th class="p-5 text-xs">Desc</th><th class="p-5 text-xs text-center">Cat</th><th class="p-5 text-xs text-right">Cost (Rp)</th><th class="p-5 text-right text-xs" style="width:55px;">Act</th></tr></thead><tbody>`, total = 0; 
+        let html = `<thead><tr><th class="p-5 text-xs text-center">Date</th><th class="p-5 text-xs text-center">Desc</th><th class="p-5 text-xs text-center">Cat</th><th class="p-5 text-xs text-center">Cost (Rp)</th><th class="p-5 text-center text-xs" style="width:55px;">Act</th></tr></thead><tbody>`, total = 0; 
         [...Store.state.purchases].sort((a,b)=>b.date.localeCompare(a.date)).forEach(p => { 
             total += p.cost; 
-            // Abbreviate categories to keep table compact
+            
+            // Format YYYY-MM-DD into DD-MM-YYYY
+            let dParts = p.date.split('-');
+            let fDate = dParts.length === 3 ? `${dParts[2]}-${dParts[1]}-${dParts[0]}` : p.date;
+            
             let catBadge = p.category === 'Raw Material' ? 'Raw' : p.category === 'Operational' ? 'Opr' : p.category.substring(0,4);
+            
             html += `<tr class="text-xs">
-                        <td class="p-5 font-bold">${p.date.slice(-5)}</td>
-                        <td class="p-5 truncate" style="max-width:85px;" title="${p.name}">${p.name}</td>
+                        <td class="p-5 font-bold text-center">${fDate}</td>
+                        <td class="p-5 text-center">${p.name}</td>
                         <td class="p-5 text-center"><span class="badge" style="padding:2px 4px;">${catBadge}</span></td>
-                        <td class="p-5 text-danger font-bold text-right">${Utils.fmt(p.cost)}</td>
-                        <td class="p-5 text-right">
-                            <div class="flex gap-5" style="justify-content:flex-end">
+                        <td class="p-5 text-danger font-bold text-center">${Utils.fmt(p.cost)}</td>
+                        <td class="p-5 text-center">
+                            <div class="flex gap-5" style="justify-content:center">
                                 <button class="btn-icon btn-warning flex-center" style="width:22px; height:22px; font-size:10px;" onclick="Purchases.edit(${p.id})">✏️</button>
                                 <button class="btn-icon btn-danger flex-center" style="width:22px; height:22px; font-size:10px;" onclick="Purchases.del(${p.id})">🗑️</button>
                             </div>
@@ -1020,7 +1038,7 @@ const Purchases = {
 };
 
 const BOP = {
-    render: () => { let html = `<thead><tr><th>Item</th><th>Type</th><th style="width: 22%;">Input Cost</th><th>Life (Mo)</th><th style="width: 22%;">Daily Cost</th><th class="text-right">Actions</th></tr></thead><tbody>`, total = 0; Store.state.bop.forEach((b, i) => { total += b.daily; let costStr = b.originVal ? b.originVal : Math.round(b.daily * (b.type==='Asset' ? b.life*30 : 30)); html += `<tr><td>${b.name}</td><td>${b.type}</td><td>Rp ${Utils.fmt(costStr)}</td><td>${b.type==='Asset'?b.life:'-'}</td><td class="text-bold">Rp ${Utils.fmt(b.daily)}</td><td class="text-right"><div class="flex gap-5" style="justify-content:flex-end"><button class="btn-icon btn-warning" onclick="BOP.edit(${b.id})">✏️</button><button class="btn-icon btn-danger" onclick="BOP.del(${i})">🗑️</button></div></td></tr>`; }); UI.html('table-bop', html + '</tbody>'); UI.text('b-total-val', `Rp ${Utils.fmt(total)}`); return total; },
+    render: () => { let html = `<thead><tr><th>Item</th><th>Type</th><th style="width: 22%;">Input Cost</th><th>Life (Mo)</th><th style="width: 22%;">Daily Cost</th><th class="text-right">Actions</th></tr></thead><tbody>`, total = 0; Store.state.bop.forEach((b, i) => { total += b.daily; let costStr = b.originVal ? b.originVal : Math.round(b.daily * (b.type==='Asset' ? b.life*30 : 30)); html += `<tr><td>${b.name}</td><td>${b.type}</td><td>Rp ${Utils.fmt(costStr)}</td><td>${b.type==='Asset'?b.life:'-'}</td><td class="text-bold">Rp ${Utils.fmt(b.daily)}</td><td class="text-right"><div class="flex gap-5" style="justify-content:flex-end"><button class="btn-icon btn-warning flex-center" onclick="BOP.edit(${b.id})">✏️</button><button class="btn-icon btn-danger flex-center" onclick="BOP.del(${i})">🗑️</button></div></td></tr>`; }); UI.html('table-bop', html + '</tbody>'); UI.text('b-total-val', `Rp ${Utils.fmt(total)}`); return total; },
     save: (type) => { let id = UI.val('b-id') || Date.now(), n, dCost = 0, oVal = 0, life = 0; if(type === 'Asset') { n = UI.val('b-a-name'); oVal = Utils.num(UI.val('b-a-price')); life = parseFloat(UI.val('b-a-life')); if(!n || !oVal || !life) return alert("Fill asset data"); dCost = oVal / (life * 30); } else { n = UI.val('b-b-name'); oVal = Utils.num(UI.val('b-b-cost')); if(!n || !oVal) return alert("Fill bill data"); dCost = oVal / 30; } if(UI.val('b-id')) Store.state.bop = Store.state.bop.filter(x => x.id != id); Store.state.bop.push({ id: parseInt(id), name: n, type, daily: dCost, originVal: oVal, life }); Store.save(); BOP.cancel(); BOP.render(); },
     edit: (id) => { let b = Store.state.bop.find(x => x.id == id); if(!b) return; UI.val('b-id', id); if(b.type === 'Asset') { UI.val('b-a-name', b.name); UI.val('b-a-price', Utils.fmt(b.originVal || b.daily*b.life*30)); UI.val('b-a-life', b.life||36); document.getElementById('btn-a-save').innerText = 'Update'; document.getElementById('box-asset').style.borderColor = 'var(--warning)'; document.getElementById('box-bill').style.opacity = '0.3'; } else { UI.val('b-b-name', b.name); UI.val('b-b-cost', Utils.fmt(b.originVal || b.daily*30)); document.getElementById('btn-b-save').innerText = 'Update'; document.getElementById('box-bill').style.borderColor = 'var(--warning)'; document.getElementById('box-asset').style.opacity = '0.3'; } document.querySelectorAll('.btn-b-cancel').forEach(el => el.classList.remove('hidden')); },
     cancel: () => { UI.val('b-id', ''); UI.val('b-a-name', ''); UI.val('b-a-price', ''); UI.val('b-a-life', ''); UI.val('b-b-name', ''); UI.val('b-b-cost', ''); document.getElementById('btn-a-save').innerText = 'Add Asset'; document.getElementById('btn-b-save').innerText = 'Add Bill'; document.getElementById('box-asset').style = 'border:1px solid transparent; opacity:1'; document.getElementById('box-bill').style = 'border:1px solid transparent; opacity:1'; document.querySelectorAll('.btn-b-cancel').forEach(el => el.classList.add('hidden')); },
@@ -1037,12 +1055,6 @@ const DataBackup = {
 Store.load();
 UI.val('filter-start', Utils.today()); UI.val('filter-end', Utils.today()); UI.val('p-date', Utils.today());
 UI.nav('pos');
-</script>
-
-<script>
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(() => console.log('v61 SW Registered'));
-    }
 </script>
 </body>
 </html>
