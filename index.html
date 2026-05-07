@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TK POS - Version 62</title>
+    <title>TK POS - Version 63</title>
     
     <meta name="theme-color" content="#0f172a">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/924/924514.png">
@@ -42,13 +42,14 @@
         .text-primary { color: var(--primary); } .text-accent { color: var(--accent); }
         .text-success { color: var(--success); } .text-danger { color: var(--danger); } 
         .text-warning { color: var(--warning); } .text-muted { color: var(--muted); }
-        .text-right { text-align: right; } .text-center { text-align: center; }
+        .text-left { text-align: left; } .text-right { text-align: right; } .text-center { text-align: center; }
 
         .hidden { display: none !important; }
         .w-100 { width: 100%; } .w-auto { width: auto; } .h-100 { height: 100%; }
         .shrink-0 { flex-shrink: 0; } .flex-1 { flex: 1; min-height: 0; overflow: hidden; }
         .scroll-y { overflow-y: auto; overflow-x: hidden; position: relative; }
         .border-bottom { border-bottom: 1px solid var(--border); } .border-dashed { border-bottom: 1px dashed var(--border); } .border-radius-8 { border-radius: 8px; }
+        .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         .sidebar { width: 80px; background: var(--primary); padding: 15px 10px; color: white; flex-shrink: 0; z-index: 50; height: 100dvh; display: flex; flex-direction: column; overflow-y: auto; }
         .logo-icon { width: 40px; height: 40px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 900; box-shadow: 0 0 15px rgba(59,130,246,0.4); margin: 0 auto 25px; }
@@ -69,7 +70,6 @@
         input:focus, select:focus { border-color: var(--accent); outline: none; }
         input[type="checkbox"] { width: auto; transform: scale(1.3); margin-right: 10px; cursor: pointer; }
         
-        /* v62: Fixed select dropdown overlap by forcing custom arrow and right padding */
         select { 
             padding-right: 35px; 
             appearance: none; 
@@ -740,8 +740,9 @@ const POS = {
         let receiptHtml = POS.cart.map(i => {
             let modReceipt = '';
             if (i.appliedMods && i.appliedMods.length > 0) {
-                modReceipt = `<br><span style="font-size:10px; color:#555; font-style: normal;">` + 
-                             i.appliedMods.map(m => `  * ${m}`).join('<br>') + 
+                // v63: Clean, comma-separated names, no bullet points
+                modReceipt = `<br><span style="font-size:10px; color:#555; font-style: normal; display:block; margin-top:2px;">` + 
+                             i.appliedMods.join(', ') + 
                              `</span>`;
             }
             return `<div class="flex-between mb-5 align-top">
@@ -955,23 +956,25 @@ const Sales = {
 // COMPACT PURCHASES (EXPENSE) RENDER LOGIC
 const Purchases = {
     render: () => { 
-        let html = `<thead><tr><th class="p-5 text-xs text-center">Date</th><th class="p-5 text-xs text-center">Desc</th><th class="p-5 text-xs text-center">Cat</th><th class="p-5 text-xs text-center">Cost (Rp)</th><th class="p-5 text-center text-xs" style="width:55px;">Act</th></tr></thead><tbody>`, total = 0; 
+        // v63: Left-aligned th, Right-aligned Cost th
+        let html = `<thead><tr><th class="p-5 text-xs text-left">Date</th><th class="p-5 text-xs text-left">Desc</th><th class="p-5 text-xs text-left">Cat</th><th class="p-5 text-xs text-right">Cost (Rp)</th><th class="p-5 text-right text-xs" style="width:55px;">Act</th></tr></thead><tbody>`, total = 0; 
+        
         [...Store.state.purchases].sort((a,b)=>b.date.localeCompare(a.date)).forEach(p => { 
             total += p.cost; 
             
-            // Format YYYY-MM-DD into DD-MM-YYYY
             let dParts = p.date.split('-');
             let fDate = dParts.length === 3 ? `${dParts[2]}-${dParts[1]}-${dParts[0]}` : p.date;
             
             let catBadge = p.category === 'Raw Material' ? 'Raw' : p.category === 'Operational' ? 'Opr' : p.category.substring(0,4);
             
+            // v63: Left-aligned td, Right-aligned Cost td
             html += `<tr class="text-xs">
-                        <td class="p-5 font-bold text-center">${fDate}</td>
-                        <td class="p-5 text-center">${p.name}</td>
-                        <td class="p-5 text-center"><span class="badge" style="padding:2px 4px;">${catBadge}</span></td>
-                        <td class="p-5 text-danger font-bold text-center">${Utils.fmt(p.cost)}</td>
-                        <td class="p-5 text-center">
-                            <div class="flex gap-5" style="justify-content:center">
+                        <td class="p-5 font-bold text-left">${fDate}</td>
+                        <td class="p-5 text-left">${p.name}</td>
+                        <td class="p-5 text-left"><span class="badge" style="padding:2px 4px;">${catBadge}</span></td>
+                        <td class="p-5 text-danger font-bold text-right">${Utils.fmt(p.cost)}</td>
+                        <td class="p-5 text-right">
+                            <div class="flex gap-5" style="justify-content:flex-end">
                                 <button class="btn-icon btn-warning flex-center" style="width:22px; height:22px; font-size:10px;" onclick="Purchases.edit(${p.id})">✏️</button>
                                 <button class="btn-icon btn-danger flex-center" style="width:22px; height:22px; font-size:10px;" onclick="Purchases.del(${p.id})">🗑️</button>
                             </div>
